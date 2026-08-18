@@ -12,7 +12,6 @@ export default defineBackground(() => {
   // setPanelBehavior tells Chrome to open the side panel when the toolbar
   // icon is clicked — works together with the popup auto-redirect.
   try {
-    // @ts-expect-error — chrome.sidePanel not in WXT types
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   } catch {
     // API may not be available in all Chrome versions — silent fallback

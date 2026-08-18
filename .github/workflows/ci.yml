@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux is the primary gate. Windows is included because development
+        # happens there, and a path-separator bug is invisible to a Linux-only
+        # pipeline — one reached a developer's machine during WS0 precisely
+        # because CI could not have caught it.
+        #
+        # Windows runners bill at 2x minutes. To drop the Windows job, reduce
+        # this list to `[ubuntu-latest]`; nothing else needs to change.
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Build MUST run before typecheck.
+      # `codegen` resolves `@playwright-guru/locator-engine` through its published
+      # `types` entry (`dist/index.d.ts`). `dist/` is generated, gitignored, and
+      # therefore absent in a fresh clone — so `tsc --noEmit` cannot resolve the
+      # workspace dependency until `tsc -b` has emitted it. Reordering these two
+      # steps breaks CI on a clean checkout.
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # ESLint only. Architectural boundary rules R1–R5.
+      - name: Lint
+        run: pnpm lint
+
+      # Vitest only.
+      - name: Test
+        run: pnpm test
+
+      - name: Format check
+        run: pnpm format:check

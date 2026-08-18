@@ -70,17 +70,18 @@ export function generateAllCSSVariants(attrs: ElementAttributes): CSSVariant[] {
   }
   if (attrs.className) {
     const cls = attrs.className.split(/\s+/).filter(Boolean);
-    if (cls.length >= 1) {
-      v.push({ selector: `.${ec(cls[0])}`,                          description: `Class "${cls[0]}" only`,          subTab: 'core', category: 'class', reliability: 'low' });
-      v.push({ selector: `${tag}.${ec(cls[0])}`,                   description: `${tag} + class "${cls[0]}"`,      subTab: 'core', category: 'class', reliability: 'low' });
-      v.push({ selector: `*.${ec(cls[0])}`,                         description: `Any tag with class`,              subTab: 'core', category: 'class', reliability: 'low' });
+    const [cls0, cls1, cls2] = cls;
+    if (cls0) {
+      v.push({ selector: `.${ec(cls0)}`,                          description: `Class "${cls0}" only`,          subTab: 'core', category: 'class', reliability: 'low' });
+      v.push({ selector: `${tag}.${ec(cls0)}`,                   description: `${tag} + class "${cls0}"`,      subTab: 'core', category: 'class', reliability: 'low' });
+      v.push({ selector: `*.${ec(cls0)}`,                         description: `Any tag with class`,              subTab: 'core', category: 'class', reliability: 'low' });
       v.push({ selector: `[class="${ea(attrs.className.trim())}"]`, description: 'Exact class list match',          subTab: 'core', category: 'class', reliability: 'low' });
     }
-    if (cls.length >= 2) {
-      v.push({ selector: `${tag}.${ec(cls[0])}.${ec(cls[1])}`,     description: `${tag} with 2 classes`,           subTab: 'core', category: 'class', reliability: 'medium' });
+    if (cls0 && cls1) {
+      v.push({ selector: `${tag}.${ec(cls0)}.${ec(cls1)}`,     description: `${tag} with 2 classes`,           subTab: 'core', category: 'class', reliability: 'medium' });
     }
-    if (cls.length >= 3) {
-      v.push({ selector: `${tag}.${ec(cls[0])}.${ec(cls[1])}.${ec(cls[2])}`, description: `${tag} with 3 classes`, subTab: 'core', category: 'class', reliability: 'medium' });
+    if (cls0 && cls1 && cls2) {
+      v.push({ selector: `${tag}.${ec(cls0)}.${ec(cls1)}.${ec(cls2)}`, description: `${tag} with 3 classes`, subTab: 'core', category: 'class', reliability: 'medium' });
     }
   }
 
@@ -143,7 +144,7 @@ export function generateAllCSSVariants(attrs: ElementAttributes): CSSVariant[] {
     v.push({ selector: `[name$="${ea(suf)}"]`,        description: `name ends with "${suf}"`,      subTab: 'regex', category: 'dynamic', reliability: 'medium' });
   }
   if (attrs.placeholder) {
-    const first = attrs.placeholder.split(' ')[0];
+    const first = attrs.placeholder.split(' ')[0] ?? '';
     v.push({ selector: `[placeholder^="${ea(first)}"]`, description: `placeholder starts with "${first}"`, subTab: 'regex', category: 'dynamic', reliability: 'medium' });
     v.push({ selector: `[placeholder*="${ea(attrs.placeholder.slice(0, 6))}"]`, description: 'placeholder contains substring', subTab: 'regex', category: 'dynamic', reliability: 'medium' });
   }
@@ -299,12 +300,12 @@ export function generateAllXPathVariants(attrs: ElementAttributes): XPathVariant
     if (cls) v.push({ xpath: `//${tag}[contains(@class, "${e(cls)}")]`,                   description: `class contains "${cls}"`,        subTab: 'partial', reliability: 'low'    });
   }
   if (attrs.placeholder) {
-    const first = attrs.placeholder.split(' ')[0];
+    const first = attrs.placeholder.split(' ')[0] ?? '';
     v.push({ xpath: `//${tag}[contains(@placeholder, "${e(first)}")]`,                    description: `placeholder contains "${first}"`, subTab: 'partial', reliability: 'medium' });
     v.push({ xpath: `//${tag}[starts-with(@placeholder, "${e(first)}")]`,                 description: `placeholder starts with "${first}"`, subTab: 'partial', reliability: 'medium' });
   }
   if (attrs.ariaLabel) {
-    const firstWord = attrs.ariaLabel.split(' ')[0];
+    const firstWord = attrs.ariaLabel.split(' ')[0] ?? '';
     v.push({ xpath: `//${tag}[contains(@aria-label, "${e(firstWord)}")]`,                 description: `ARIA label contains "${firstWord}"`, subTab: 'partial', reliability: 'medium' });
     v.push({ xpath: `//${tag}[starts-with(@aria-label, "${e(firstWord)}")]`,              description: `ARIA label starts with "${firstWord}"`, subTab: 'partial', reliability: 'medium' });
   }
@@ -312,7 +313,7 @@ export function generateAllXPathVariants(attrs: ElementAttributes): XPathVariant
   // ── TEXT-BASED ────────────────────────────────────────────────────────
   if (attrs.innerText) {
     const txt = attrs.innerText;
-    const firstWord = txt.split(' ')[0];
+    const firstWord = txt.split(' ')[0] ?? '';
     v.push({ xpath: `//${tag}[text()="${e(txt)}"]`,                                       description: 'Exact text match',               subTab: 'text', reliability: 'medium' });
     v.push({ xpath: `//${tag}[normalize-space()="${e(txt)}"]`,                            description: 'Normalized whitespace match',     subTab: 'text', reliability: 'medium' });
     v.push({ xpath: `//${tag}[contains(text(), "${e(firstWord)}")]`,                      description: `Text contains "${firstWord}"`,   subTab: 'text', reliability: 'low'    });
@@ -323,7 +324,7 @@ export function generateAllXPathVariants(attrs: ElementAttributes): XPathVariant
     const lt = attrs.labelText;
     v.push({ xpath: `//label[text()="${e(lt)}"]/following-sibling::${tag}`,               description: `Following sibling ${tag} after label`, subTab: 'text', reliability: 'medium' });
     v.push({ xpath: `//label[normalize-space()="${e(lt)}"]/following-sibling::${tag}[1]`, description: 'First sibling after label (normalized)', subTab: 'text', reliability: 'medium' });
-    v.push({ xpath: `//label[contains(text(), "${e(lt.split(' ')[0])}")]//following-sibling::${tag}`, description: 'Partial label text sibling', subTab: 'text', reliability: 'low' });
+    v.push({ xpath: `//label[contains(text(), "${e(lt.split(' ')[0] ?? '')}")]//following-sibling::${tag}`, description: 'Partial label text sibling', subTab: 'text', reliability: 'low' });
   }
   if (attrs.placeholder) {
     v.push({ xpath: `//${tag}[@placeholder and normalize-space(@placeholder)="${e(attrs.placeholder)}"]`, description: 'Placeholder — normalized', subTab: 'text', reliability: 'medium' });

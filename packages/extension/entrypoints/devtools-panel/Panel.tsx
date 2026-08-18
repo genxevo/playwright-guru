@@ -105,7 +105,6 @@ export function Panel() {
 
   const evaluate = useCallback(() => {
     setLoading(true);
-    // @ts-expect-error DevTools API
     chrome.devtools.inspectedWindow.eval(EVAL_SCRIPT,(result:EvalResult|null,error:{description?:string}|undefined)=>{
       setLoading(false);
       if (error){setEvalError(error.description??'Eval error');setEvalResult(null);return;}
@@ -118,9 +117,7 @@ export function Panel() {
 
   useEffect(()=>{
     evaluate();
-    // @ts-expect-error DevTools API
     chrome.devtools.panels.elements.onSelectionChanged.addListener(evaluate);
-    // @ts-expect-error DevTools API
     return()=>chrome.devtools.panels.elements.onSelectionChanged.removeListener(evaluate);
   },[evaluate]);
 
@@ -135,7 +132,6 @@ export function Panel() {
     if(!verifyInput.trim())return; setVerifyResult(null);
     const sel=verifyInput.trim(),isXP=sel.startsWith('//')||sel.startsWith('(//');
     const q=isXP?`(function(){try{const r=document.evaluate('count('+${JSON.stringify(sel)}+')',document,null,XPathResult.NUMBER_TYPE,null);return Math.round(r.numberValue);}catch(e){return -1;}})()`:`(function(){try{return document.querySelectorAll(${JSON.stringify(sel)}).length;}catch(e){return -1;}})()`;
-    // @ts-expect-error DevTools API
     chrome.devtools.inspectedWindow.eval(q,(count:number)=>setVerifyResult({count:count??-1,error:count===-1?'Invalid selector':undefined}));
   },[verifyInput]);
 

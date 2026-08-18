@@ -1,0 +1,42 @@
+# Normalise line endings across platforms.
+# Repository stores LF; Windows checkouts are not converted to CRLF.
+# Introduced in WS0 to prevent CRLF/LF churn before Linux CI and future contributors.
+* text=auto eol=lf
+
+# Explicit text types
+*.ts       text eol=lf
+*.tsx      text eol=lf
+*.js       text eol=lf
+*.jsx      text eol=lf
+*.json     text eol=lf
+*.jsonc    text eol=lf
+*.html     text eol=lf
+*.css      text eol=lf
+*.md       text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.svg      text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.editorconfig   text eol=lf
+
+# Binary — never convert
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.zip  binary
+*.crx  binary
+*.pdf  binary
+
+# Generated — collapsed in GitHub's diff view and excluded from language stats.
+# NOTE: deliberately WITHOUT the `-diff` attribute. `-diff` tells git not to
+# produce a textual diff, which makes `git diff --stat` report the lockfile as
+# `Bin 134532 -> 160328 bytes`. The file is pure LF-terminated ASCII with no BOM
+# and no NUL bytes — it is not binary, and a reviewer must be able to read the
+# dependency changes it records.
+pnpm-lock.yaml text eol=lf linguist-generated=true

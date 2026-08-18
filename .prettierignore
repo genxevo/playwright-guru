@@ -1,0 +1,24 @@
+node_modules
+dist
+.output
+.wxt
+coverage
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# ── Pre-existing source, not yet Prettier-formatted (added in WS0) ──────────
+# Formatting these now would produce a large, unreviewable diff across code that
+# WS3, WS5 and WS7 are already scheduled to rewrite — exactly the unrelated
+# churn WS0 forbids. Each entry is removed from this list by the workstream that
+# rewrites the file, so the debt shrinks as real work lands rather than being
+# paid twice.
+tsconfig.json
+packages/extension/wxt.config.ts
+packages/extension/entrypoints/
+packages/extension/utils/
+packages/locator-engine/src/accessibility.ts
+packages/locator-engine/src/engine.ts
+packages/locator-engine/src/scorer.ts
+packages/locator-engine/src/types.ts
+packages/codegen/src/index.ts
+packages/codegen/src/renderers/
