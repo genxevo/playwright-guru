@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Privacy Policy — Playwright Guru</title>
+    <meta
+      name="description"
+      content="Privacy policy for the Playwright Guru Chrome extension. No data collection, no network requests, everything stays on your device."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        max-width: 52rem;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 6rem;
+        font:
+          16px/1.65 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        color: #1a1d23;
+        background: #fff;
+      }
+      h1 {
+        font-size: 1.9rem;
+        margin: 0 0 0.4rem;
+        letter-spacing: -0.02em;
+      }
+      .meta {
+        color: #5b6472;
+        font-size: 0.92rem;
+        margin: 0 0 0.3rem;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 2.4rem 0 0.6rem;
+        letter-spacing: -0.01em;
+        border-top: 1px solid #e6e8ec;
+        padding-top: 1.4rem;
+      }
+      p {
+        margin: 0.7rem 0;
+      }
+      ul {
+        margin: 0.7rem 0;
+        padding-left: 1.3rem;
+      }
+      li {
+        margin: 0.35rem 0;
+      }
+      code {
+        background: #f2f4f7;
+        padding: 0.12em 0.4em;
+        border-radius: 4px;
+        font-size: 0.88em;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0;
+        font-size: 0.94rem;
+      }
+      th,
+      td {
+        border: 1px solid #e6e8ec;
+        padding: 0.55rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f7f8fa;
+        font-weight: 600;
+      }
+      a {
+        color: #1f7a24;
+      }
+      .callout {
+        border-left: 3px solid #2ead33;
+        background: #f4faf5;
+        padding: 0.85rem 1rem;
+        margin: 1.2rem 0;
+        border-radius: 0 6px 6px 0;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #e6e8ec;
+          background: #171b26;
+        }
+        .meta {
+          color: #9aa4b2;
+        }
+        h2 {
+          border-color: #2a3040;
+        }
+        code {
+          background: #232838;
+        }
+        th,
+        td {
+          border-color: #2a3040;
+        }
+        th {
+          background: #1e2330;
+        }
+        a {
+          color: #5fd166;
+        }
+        .callout {
+          background: #17241a;
+          border-color: #2ead33;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Privacy Policy — Playwright Guru</h1>
+    <p class="meta">Last updated: 18 August 2026</p>
+    <p class="meta">
+      Applies to: Playwright Guru Chrome Extension, version 0.1.0 (Developer Preview)
+    </p>
+
+    <h2>Summary</h2>
+    <p>
+      Playwright Guru does not collect, transmit, sell, or share any data. Everything the extension
+      does happens locally in your browser. It makes no network requests of any kind.
+    </p>
+
+    <h2>What the extension accesses</h2>
+    <p>
+      When you explicitly activate the element picker — by opening the Playwright Guru side panel
+      and clicking an element on the page, or by selecting an element in the DevTools Elements panel
+      — the extension reads structural information about that element from the page you are viewing.
+      This includes the element's tag name, attributes (such as <code>id</code>, <code>class</code>,
+      <code>role</code>, <code>aria-label</code>, <code>placeholder</code>, <code>alt</code>,
+      <code>title</code>, and test-id attributes), its visible text, and its position relative to
+      surrounding elements.
+    </p>
+    <p>
+      This information is used for one purpose only: to compute Playwright, CSS, and XPath locators
+      for the element you selected and display them to you.
+    </p>
+    <p>
+      The extension does not read page content at any other time. It does not monitor your browsing,
+      and it does not run in the background collecting information.
+    </p>
+
+    <h2>Recording mode</h2>
+    <p>
+      The side panel includes a recording control. When you start a recording, the extension
+      captures the actions you perform on the page — such as clicks, text entered into form fields,
+      dropdown selections, and page navigations — so it can generate a Playwright test script from
+      them. Each recorded action stores the element's identifying attributes, the value you entered
+      where one applies, the page URL for navigations, and a timestamp.
+    </p>
+    <p>
+      Recording only happens while you have explicitly started it, and stops when you stop it. Like
+      everything else in this extension, recorded actions are held in local extension storage on
+      your own computer and are never transmitted anywhere.
+    </p>
+    <div class="callout">
+      <strong>Please note:</strong> because a recording captures the values you type, avoid
+      recording while entering real passwords, personal data, or other sensitive information. Use
+      test credentials instead. You can clear a recording at any time from the side panel.
+    </div>
+
+    <h2>What is stored, and where</h2>
+    <p>
+      The extension stores the following using Chrome's local extension storage
+      (<code>chrome.storage.local</code>), which resides on your own computer:
+    </p>
+    <ul>
+      <li>the generated code you have added to the code buffer</li>
+      <li>your selected output language (TypeScript, JavaScript, Python, Java, or C#)</li>
+      <li>the most recent element you picked</li>
+      <li>whether the picker is currently active</li>
+      <li>whether a recording is currently in progress</li>
+      <li>the actions captured during a recording, as described above</li>
+    </ul>
+    <p>
+      This data never leaves your device. The extension does <strong>not</strong> use Chrome's
+      <em>sync</em> storage, so none of it is uploaded to Google or synchronised across your
+      devices. You can erase all of it at any time using the Clear controls in the extension, or by
+      removing the extension from Chrome.
+    </p>
+
+    <h2>What the extension does NOT do</h2>
+    <ul>
+      <li>
+        It makes <strong>no network requests</strong>. It contains no code that calls
+        <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, or
+        <code>sendBeacon</code>.
+      </li>
+      <li>
+        It sends <strong>no page content, code, or usage data</strong> to any server, including our
+        own.
+      </li>
+      <li>It contains <strong>no analytics, telemetry, or tracking</strong> of any kind.</li>
+      <li>
+        It loads <strong>no remote code</strong>. All code is contained in the published package.
+      </li>
+      <li>It uses <strong>no third-party services</strong>.</li>
+      <li>
+        It does <strong>not</strong> access your cookies, browsing history, bookmarks, downloads, or
+        account identity.
+      </li>
+      <li>
+        It does <strong>not</strong> read your clipboard. When you press a copy button, it writes
+        the generated code to your clipboard; it never reads clipboard contents.
+      </li>
+      <li>
+        It collects <strong>no</strong> personally identifiable information, authentication
+        credentials, financial information, health information, or location data.
+      </li>
+    </ul>
+
+    <h2>Permissions, and why each is needed</h2>
+    <table>
+      <tr>
+        <th>Permission</th>
+        <th>Why it is required</th>
+      </tr>
+      <tr>
+        <td><code>activeTab</code></td>
+        <td>To access the tab you are actively inspecting when you use the picker.</td>
+      </tr>
+      <tr>
+        <td><code>scripting</code></td>
+        <td>
+          To inject the element-picker script into that tab so a clicked element can be analysed.
+        </td>
+      </tr>
+      <tr>
+        <td><code>storage</code></td>
+        <td>
+          To save your code buffer, language preference, picker state, and recordings locally.
+        </td>
+      </tr>
+      <tr>
+        <td><code>sidePanel</code></td>
+        <td>The extension's user interface is a Chrome side panel.</td>
+      </tr>
+      <tr>
+        <td>Host access to all sites (<code>&lt;all_urls&gt;</code>)</td>
+        <td>
+          Test automation engineers generate locators on arbitrary applications, which cannot be
+          listed in advance. It is also required so the picker works on tabs that were already open
+          before the extension was installed. Page content is read only when you explicitly activate
+          the picker or a recording, and is never transmitted.
+        </td>
+      </tr>
+    </table>
+
+    <h2>Data sharing</h2>
+    <p>
+      We do not sell, transfer, or share your data with anyone, because we never receive it. No data
+      is transmitted off your device.
+    </p>
+
+    <h2>Children's privacy</h2>
+    <p>
+      Playwright Guru is a developer tool intended for professional software engineers. It is not
+      directed at children and collects no data from anyone.
+    </p>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      If the extension's data behaviour changes in a future version, this policy will be updated
+      before that version is published, and the "Last updated" date will change.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions about this policy:
+      <a href="mailto:rajesh@genxevo.com">rajesh@genxevo.com</a>
+    </p>
+    <p>
+      Source code and issue tracker:
+      <a href="https://github.com/genxevo/playwright-guru">github.com/genxevo/playwright-guru</a>
+    </p>
+  </body>
+</html>
