@@ -1,0 +1,29 @@
+{
+  "name": "playwright-guru",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playwright Guru \u2014 browser extension that generates idiomatic Playwright locators (TypeScript, JavaScript, Python, Java, C#) from any clicked DOM element.",
+  "homepage": "https://playwrightguru.com",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev": "pnpm --filter @playwright-guru/extension run dev",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vitejs/plugin-react": "^4.3.4",
+      "vite-node": "^3.2.4"
+    }
+  }
+}

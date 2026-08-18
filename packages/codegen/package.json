@@ -1,0 +1,28 @@
+{
+  "name": "@playwright-guru/codegen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Renders the canonical Playwright Guru locator AST into idiomatic TypeScript/JavaScript, Python (sync/async), Java, and C# code.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@playwright-guru/locator-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

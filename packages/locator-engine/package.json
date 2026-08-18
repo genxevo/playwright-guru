@@ -1,0 +1,25 @@
+{
+  "name": "@playwright-guru/locator-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure TypeScript domain engine for the Playwright locator AST \u2014 no DOM framework, no rendering, no extension code.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

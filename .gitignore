@@ -1,0 +1,48 @@
+# ─── Dependencies ──────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─── Build output ──────────────────────────────────────────────────────────
+dist/
+.output/
+.wxt/
+*.tsbuildinfo
+
+# ─── Test & coverage ───────────────────────────────────────────────────────
+coverage/
+.vitest/
+test-results/
+playwright-report/
+
+# ─── Environment & secrets ─────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+
+# ─── Logs ──────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ─── Editor & OS ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# ─── Misc ──────────────────────────────────────────────────────────────────
+.cache/
+tmp/
+*.zip
+*.crx
