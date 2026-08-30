@@ -1,0 +1,21 @@
+# Playwright Guru — Decision Log
+
+Append-only. Contradictions are **recorded**, never silently resolved.
+Classes: `LOCKED` · `CURRENT` · `PROPOSED` · `DEFERRED` · `FUTURE` · `UNKNOWN` · `NOT AUTHORIZED`
+
+| # | Date | Decision / Contradiction | Resolution | Class |
+|---|---|---|---|---|
+| DL-1 | 2026-08 | Blueprint §6.7 claims `input[type=password]` must return no implicit role because `getByRole('textbox')` will not find it. Verified against `playwright-core@1.62.1` `selectorGenerator.ts`: `password` falls through `inputTypeToRole[type] \|\| "textbox"` → **textbox** | **E6 INVALIDATED BY EVIDENCE.** Guru's current code already matches Playwright. Do not implement an E6 fix. Blueprint row is wrong; recorded rather than edited | `LOCKED` |
+| DL-1a | 2026-08 | Same investigation found two real divergences | **N-1** `input[type=file]` → Playwright `button`, Guru `textbox`. **N-2** `text/email/tel/url` + `list`→`<datalist>` → Playwright `combobox`, Guru `textbox`. Both → WS1 | `DEFERRED` |
+| DL-2 | 2026-08 | Blueprint WS0 acceptance requires `Panel.tsx` to have no line >120 chars. Reality: 74 such lines, incl. one of 3,891 chars | **Divergence stands and stays documented.** Quarantined in `.prettierignore`; removed by the workstream that rewrites the file. Silent correction is forbidden | `LOCKED` |
+| DL-3 | 2026-08 | WS0 closure report reads as more progress than users receive | Qualifier added everywhere: **every WS0 module is imported by zero production paths** | `LOCKED` |
+| DL-4 | 2026-08 | "`RECORDING_LIMITS` is the single source of truth" is true, yet the legacy recorder bypasses it — `content.ts:173` hard-codes 600 ms where the constant says 500; `appendRecAction` has no cap; `RECORDING_LIMITS` is imported by zero files under `entrypoints/` | Both statements accurate. The guarantee is **narrower than it reads**. WS9 closes it | `CURRENT` |
+| DL-5 | 2026-08 | E4 recorded as "fixed" via `escapeCssStringLiteral` in `resolver.ts`; `content.ts:219-221,309-320` still uses `CSS.escape` inside quoted attribute values — and that is the code that runs | **E4 counts as still present for users.** Fix belongs to WS3 | `DEFERRED` |
+| DL-6 | 2026-08 | Blueprint WS11 says "version bump to 1.0.0"; current plan publishes 0.1.x | Not a contradiction — the Developer Preview is an agreed addition. **1.0.0 remains WS11's exit** | `LOCKED` |
+| DL-7 | 2026-08 | Guru ranks `testId` **last**; Playwright's generator scores it **first** (1 vs role+name 105); Playwright's *docs* say prefer role and call test-ids "not user facing" | **Deliberately unresolved.** Ranking policy is a WS1 decision. Audit recommendation: rank as the generator does, surface the unique role locator as a co-equal "user-facing" alternative, and explain the tension. Never claim "BEST" on opinion alone | `PROPOSED` |
+| DL-8 | 2026-08 | Claude asserted mid-project that recording was implemented and user-reachable | **Wrong.** Repository authoritative: `content.ts:22-30` has no `START_RECORDING` case. Recorded so the error is not repeated, and so the store copy written on that assumption is never used | `LOCKED` |
+| DL-9 | 2026-08 | Where should roadmap documentation live — repo `docs/roadmap/` or the Claude Project? | The Claude Project already holds every prior report and is the existing system. Roadmap joins it as primary; repo-ready copies delivered for **optional** placement. **No duplicate documentation system created** | `CURRENT` |
+| DL-10 | 2026-08 | Playwright CRX user count observed as both ~10k and ~40k across sources | Recorded as `UNKNOWN` rather than picked | `UNKNOWN` |
+| DL-11 | 2026-08 | Product scope pressure from competitors supporting 5 frameworks | **Playwright-only, locked.** Selenium/Cypress/WebdriverIO/Robot Framework are studied, never built | `LOCKED` |
+| DL-12 | 2026-08 | Should future framework generation build frameworks? | **No.** Generate *changes into an existing project*, surfaced as Review→Apply. Never invent architecture. AI optional, never required | `LOCKED` (for the future direction) |
+| DL-13 | 2026-08 | GitHub Actions Node 20 deprecation annotation | Concerns the **action runtime** (`@v4`→`@v5`), **not** the project's `node-version: 20`. Do not change the project's Node version | `LOCKED` |
