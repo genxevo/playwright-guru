@@ -28,6 +28,14 @@ const EXTENSION_NON_BROWSER = [
   'packages/extension/src/application/**/*.{ts,tsx}',
   'packages/extension/src/ui/**/*.{ts,tsx}',
   'packages/extension/src/config/**/*.{ts,tsx}',
+  // WS5 — the new application layers are covered by R1 from the day they
+  // exist. `src/hooks/**` and `src/services/**` hold panel orchestration that
+  // MUST reach the browser through a port or an adapter, never through a
+  // global; adding them here is a widening of the guard, not a relaxation of
+  // it, and it is what stops WS5's extraction from creating a directory where
+  // `chrome.*` would quietly be legal again.
+  'packages/extension/src/hooks/**/*.{ts,tsx}',
+  'packages/extension/src/services/**/*.{ts,tsx}',
 ];
 
 const UI_PRODUCT = ['packages/extension/src/ui/**/*.{ts,tsx}'];
@@ -65,6 +73,9 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/.output/**',
+      // WS9 Decision A — the E2E-only artifact. A SIBLING of `.output`, so the
+      // glob above does not cover it and it needs an entry of its own.
+      '**/.output-e2e/**',
       '**/.wxt/**',
       '**/coverage/**',
       '**/*.tsbuildinfo',

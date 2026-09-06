@@ -1,20 +1,148 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browser } from 'wxt/browser';
+import { DEVTOOLS_TARGET_ATTR } from '../utils/messaging';
+import type {
+  RuntimeMessage,
+  RuntimeMessageAck,
+  VerifySelectorMessage,
+  VerifyLocatorExpressionMessage,
+  VerificationStatus,
+  PersistPickMessage,
+  PersistPickerStateMessage,
+  PersistRecordingStateMessage,
+} from '../utils/messaging';
+import { normalizeAck } from '../utils/messaging';
 import {
-  ROLE_CSS_SELECTORS, buildCandidateSteps, buildLocatorChain,
-  scoreCandidate, rankCandidates, pickBestUnique,
-  type LocatorStep, type LocatorChain, type ScoredCandidate, type ElementAttributes,
+  verifyLocatorExpression,
+  classifyVerification,
+  type ProbeErrorCode,
 } from '@playwright-guru/locator-engine';
-import type { RuntimeMessage, RuntimeMessageAck, StoredPick, FrameInfo, VerifySelectorMessage, RecordedAction, StartRecordingMessage, StopRecordingMessage } from '../utils/messaging';
+import { LiveDomProbe } from '../src/runtime/probe';
+import { capturePick } from '../src/runtime/capture';
+import { createPicker } from '../src/runtime/picker';
+import {
+  createRecordingRuntime,
+  HEARTBEAT_INTERVAL_MS,
+} from '../src/runtime/recording';
 
-const HIGHLIGHT_ID = 'playwright-guru-highlight';
 const LOG = '[PlaywrightGuru/content]';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
+  // WS3: inject into every frame, not only the top document, so the picker,
+  // Verify Selector, and DevTools pick all reach elements inside <iframe>s.
+  // The manifest's content_scripts block is generated from this config —
+  // there is no separate wxt.config.ts edit for it.
+  allFrames: true,
   main() {
-    let pickerActive = false;
-    let highlight: HTMLDivElement | null = null;
+    /**
+     * WS4 — persistence crosses the background boundary.
+     *
+     * A content script cannot know its own tab id, and WS4 keys session state
+     * by exactly that, so the write is requested rather than performed here:
+     * `background.ts` reads the tab identity from `sender.tab.id` and writes
+     * through the one storage gateway. Keeping the gateway on that side of the
+     * seam is also what keeps the storage implementation out of `content.js`.
+     *
+     * Failures are no longer invisible: the ack says whether the state was
+     * actually saved, where before a rejected `storage.local.set` disappeared.
+     */
+    function persist(
+      message: PersistPickMessage | PersistPickerStateMessage | PersistRecordingStateMessage,
+    ): void {
+      void browser.runtime
+        .sendMessage(message)
+        .then((response) => {
+          const ack = normalizeAck(response as RuntimeMessageAck | undefined);
+          if (!ack.ok) console.warn(`${LOG} could not persist ${message.type}`, ack.error);
+        })
+        .catch((error: unknown) => {
+          console.warn(`${LOG} could not persist ${message.type}`, String(error));
+        });
+    }
+
+    const picker = createPicker((el) => {
+      const { stored } = capturePick(el);
+      persist({ type: 'PERSIST_PICK', pick: stored });
+    });
+
+    // ── WS9 slice 3 — the recording runtime ──────────────────────────────
+    //
+    // Mirrors the picker exactly: a message activates it, it owns its own
+    // content-side state, and `content.ts` stays a bootstrap that routes.
+    //
+    // `RECORDING_ENABLED` is still `false`, and the runtime defaults `enabled`
+    // to it, so START_RECORDING is refused today. That is deliberate: hiding
+    // the Record button is not a security boundary — a message can still
+    // arrive — so the feature flag fails closed here as well as in the UI.
+    //
+    // The heartbeat interval lives here rather than inside the runtime so the
+    // runtime stays timer-free and deterministically testable. Its value comes
+    // from `RECORDING_LIMITS`; this file declares no timing number of its own.
+    //
+    // WS9 slice 5B — the runtime EMITS its state; this file carries it.
+    //
+    // The sink is injected here rather than built into the runtime because
+    // `browser.runtime` may only be touched from the `entrypoints` and
+    // `src/browser` directories (R1), and because it keeps travel one-way: the
+    // runtime publishes and never reads back, so no stored record can become
+    // the runtime's opinion of itself. The message goes through the SAME
+    // content-to-background persistence path `PERSIST_PICK` already uses — the
+    // background supplies the tab identity from `sender.tab.id`, which a page
+    // cannot forge, and performs the write through the one storage gateway.
+    const recording = createRecordingRuntime({
+      doc: document,
+      now: () => Date.now(),
+      nonce: () => Math.random().toString(36).slice(2),
+      persist: ({ observation, workflow }) =>
+        persist({ type: 'PERSIST_RECORDING_STATE', observation, ...(workflow ? { workflow } : {}) }),
+    });
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+    /**
+     * WS9 navigation slice (DL-83) — ONE RECORDER PER TAB, IN THE TOP FRAME.
+     *
+     * This content script is injected with `allFrames: true`, and the background
+     * reaches it with `browser.tabs.sendMessage(tabId, message)`, which carries
+     * NO `frameId` — so a START_RECORDING arrived at every frame in the tab.
+     * Each frame holds its own `createRecordingRuntime`, so each minted its own
+     * session, each attached its own listeners, and each published to the ONE
+     * tab-scoped `recording-observation` / `recording-workflow` pair. Whichever
+     * frame wrote last became "the" recording, and the session id the panel held
+     * could stop only the frame that minted it.
+     *
+     * The fix is a single comparison, and it costs no permission and no new API:
+     * only the top frame answers the three recording messages. A sub-frame
+     * returns `false` WITHOUT calling `sendResponse`, so it is not a responder at
+     * all — Chrome then delivers the top frame's answer, deterministically,
+     * instead of whichever frame replied first. If no frame answers (a case the
+     * top frame's presence makes unreachable in a normal tab), `sendMessage`
+     * resolves `undefined`, `normalizeAck` turns that into `NO_HANDLER`, and the
+     * panel reads `unknown` — which never displays as recording.
+     *
+     * This is about SESSION OWNERSHIP only. It is not the reason frame elements
+     * are unrecordable; that refusal lives in the runtime's admission rule, and
+     * holds even for a frame element clicked while the top frame records.
+     */
+    const isTopFrame = window.top === window.self;
+
+    function startRecordingSession(): RuntimeMessageAck {
+      const result = recording.start(Date.now());
+      if (!result.ok) return { ok: false, error: result.error };
+      if (heartbeatTimer === null) {
+        heartbeatTimer = setInterval(() => recording.tick(Date.now()), HEARTBEAT_INTERVAL_MS);
+      }
+      return { ok: true, sessionId: result.sessionId };
+    }
+
+    function stopRecordingSession(sessionId: string | undefined): RuntimeMessageAck {
+      const result = recording.stop(sessionId ?? '', Date.now());
+      if (heartbeatTimer !== null && result.ok) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
 
     // ── Message receiver ─────────────────────────────────────────────────
     browser.runtime.onMessage.addListener(
@@ -26,413 +154,170 @@ export default defineContentScript({
             deactivatePicker(); sendResponse({ ok: true }); return false;
           case 'VERIFY_SELECTOR':
             handleVerify(message, sendResponse); return false;
+          case 'VERIFY_LOCATOR_EXPRESSION':
+            handleVerifyLocatorExpression(message, sendResponse); return false;
+          case 'PICK_DEVTOOLS_TARGET':
+            handleDevtoolsPick(sendResponse); return false;
+          // The three recording messages, answered by the top frame ALONE —
+          // see `isTopFrame` above. A sub-frame falls through to `return false`
+          // without responding, so exactly one frame per tab is a responder.
+          case 'START_RECORDING':
+            if (!isTopFrame) return false;
+            sendResponse(startRecordingSession()); return false;
+          case 'STOP_RECORDING':
+            if (!isTopFrame) return false;
+            sendResponse(stopRecordingSession(message.sessionId)); return false;
+          // WS9 slice 5A — a READ, and the panel's only source of truth about
+          // recording. `state()` is `lifecycleStateOf`, a pure derivation from
+          // the clock: it refreshes no heartbeat and extends no session, so a
+          // panel polling this cannot keep a dead recording looking alive.
+          case 'QUERY_RECORDING_STATE':
+            if (!isTopFrame) return false;
+            sendResponse({ ok: true, lifecycle: recording.state(Date.now()) }); return false;
           default: return false;
         }
       }
     );
 
     // ── Verify selector ──────────────────────────────────────────────────
+    /**
+     * WS7 — classifies a `ProbeError` into the SAME six-state
+     * `VerificationStatus` `classifyVerification` below already uses for
+     * measured evidence, so a raw CSS/XPath verify never has to invent a
+     * second vocabulary for "this could not be answered". `INVALID_SELECTOR`/
+     * `INVALID_XPATH` are bad syntax; `UNSUPPORTED` is a genuine environment
+     * limit (e.g. XPath without `document.evaluate`); `SCOPE_DETACHED` and
+     * `BUDGET_EXHAUSTED` are cases the probe simply could not measure —
+     * exactly `unverifiable`'s definition, never `not-found` (an unmeasured
+     * count is not the same claim as a measured zero).
+     */
+    function statusForProbeError(code: ProbeErrorCode): VerificationStatus {
+      switch (code) {
+        case 'INVALID_SELECTOR':
+        case 'INVALID_XPATH':
+          return 'invalid';
+        case 'UNSUPPORTED':
+          return 'unsupported';
+        case 'SCOPE_DETACHED':
+        case 'BUDGET_EXHAUSTED':
+          return 'unverifiable';
+      }
+    }
+
+    /**
+     * Verify reports BOTH counts, through the SAME `DomProbe` the pick pipeline
+     * uses — `resolver.ts`'s own doc comment is explicit that no surface may
+     * reintroduce a second implementation of "how many elements does this
+     * match". A probe is built fresh per request; nothing is cached across
+     * calls.
+     *
+     * WS7 — `verifyStatus` classifies the outcome through the SAME
+     * `classifyVerification` (measured evidence) / `statusForProbeError`
+     * (probe error) pair that decides Playwright locator-expression truth
+     * (WS6.2's `verifyLocatorExpression`, below). `count`/`visibleCount`/
+     * `error` are unchanged; `verifyStatus` only adds a typed classification
+     * so the UI can distinguish "invalid syntax" from "this environment
+     * cannot tell you" instead of colouring every probe error identically.
+     */
     function handleVerify(msg: VerifySelectorMessage, sendResponse: (r: RuntimeMessageAck) => void) {
-      let count = 0;
+      const probe = new LiveDomProbe(document);
+      const result = msg.selectorType === 'css'
+        ? probe.countCss(msg.selector)
+        : probe.countXPath(msg.selector);
+      if (result.error) {
+        sendResponse({
+          ok: false,
+          error: `${result.error.code}${result.error.detail ? `: ${result.error.detail}` : ''}`,
+          count: -1,
+          visibleCount: -1,
+          verifyStatus: statusForProbeError(result.error.code),
+        });
+        return;
+      }
+      sendResponse({
+        ok: true,
+        count: result.total,
+        visibleCount: result.visible,
+        verifyStatus: classifyVerification({ matchCount: result.total, visibleMatchCount: result.visible }),
+      });
+    }
+
+    // ── Verify locator expression (WS6.2) ────────────────────────────────
+    /**
+     * Reuses the exact same `LiveDomProbe` `handleVerify` above builds — a
+     * probe fresh per request, nothing cached across calls — but resolves
+     * through `verifyLocatorExpression` (parse + `resolveChain`) instead of
+     * a raw CSS/XPath count. `ok` is always `true` here: parsing/resolving
+     * a user-typed expression can legitimately land on 'invalid',
+     * 'unsupported' or 'unverifiable', and none of those are a transport
+     * failure — they are the answer.
+     */
+    function handleVerifyLocatorExpression(
+      msg: VerifyLocatorExpressionMessage,
+      sendResponse: (r: RuntimeMessageAck) => void,
+    ) {
+      const probe = new LiveDomProbe(document);
+      const verification = verifyLocatorExpression(msg.expression, probe);
+      sendResponse({ ok: true, verification });
+    }
+
+    // ── DevTools pick ─────────────────────────────────────────────────────
+    /**
+     * Builds a pick for the element the DevTools Elements panel selected (WS5).
+     *
+     * The panel has already stamped `$0` with DEVTOOLS_TARGET_ATTR through
+     * `inspectedWindow.eval`, which is the only channel that can see `$0`. The
+     * attribute travels through the DOM both worlds share; everything after
+     * this point is the SAME `capturePick` the Side Panel's click path uses, so
+     * the two surfaces cannot disagree about an element.
+     */
+    function handleDevtoolsPick(sendResponse: (r: RuntimeMessageAck) => void) {
+      const el = document.querySelector(`[${DEVTOOLS_TARGET_ATTR}]`);
+      // Removed before anything else can throw, so a failure never leaves the
+      // user's page marked.
+      el?.removeAttribute(DEVTOOLS_TARGET_ATTR);
+      if (!el) {
+        sendResponse({ ok: false, error: 'No element selected in the Elements panel.' });
+        return;
+      }
       try {
-        if (msg.selectorType === 'css') {
-          count = document.querySelectorAll(msg.selector).length;
-        } else {
-          const result = document.evaluate(
-            `count(${msg.selector})`,
-            document, null, XPathResult.NUMBER_TYPE, null
-          );
-          count = Math.round(result.numberValue);
-        }
-        sendResponse({ ok: true, count });
+        sendResponse({ ok: true, pick: capturePick(el).stored });
       } catch (e) {
-        sendResponse({ ok: false, error: String(e), count: -1 });
+        sendResponse({ ok: false, error: String(e) });
       }
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
     function activatePicker(): void {
-      if (pickerActive) return;
-      pickerActive = true;
-      void browser.storage.local.set({ pg_picker_active: true });
-      ensureHighlight();
-      document.addEventListener('pointerover', onPointerOver, { capture: true });
-      document.addEventListener('click',       onClick,       { capture: true });
-      document.addEventListener('keydown',     onKeyDown,     { capture: true });
-      document.documentElement.addEventListener('mouseleave', onMouseLeaveDoc);
-      document.documentElement.style.cursor = 'crosshair';
+      if (picker.isActive()) return;
+      persist({ type: 'PERSIST_PICKER_STATE', active: true });
+      picker.activate();
       console.info(`${LOG} picker activated`);
     }
 
     function deactivatePicker(): void {
-      if (!pickerActive) return;
-      pickerActive = false;
-      void browser.storage.local.set({ pg_picker_active: false });
-      document.removeEventListener('pointerover', onPointerOver, { capture: true });
-      document.removeEventListener('click',       onClick,       { capture: true });
-      document.removeEventListener('keydown',     onKeyDown,     { capture: true });
-      document.documentElement.removeEventListener('mouseleave', onMouseLeaveDoc);
-      document.documentElement.style.cursor = '';
-      hideHighlight();
+      if (!picker.isActive()) return;
+      persist({ type: 'PERSIST_PICKER_STATE', active: false });
+      picker.deactivate();
     }
 
-    // ── Events ────────────────────────────────────────────────────────────
-    function onPointerOver(e: Event): void {
-      const el = e.target as Element | null;
-      if (!el || el.id === HIGHLIGHT_ID) return;
-      updateHighlight(el);
-    }
-    function onMouseLeaveDoc(): void { hideHighlight(); }
-
-    function onClick(e: Event): void {
-      const el = e.target as Element | null;
-      if (!el || el.id === HIGHLIGHT_ID) return;
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      const pick = buildScoredPick(el);
-      void browser.storage.local.set({ pg_last_pick: pick });
-      deactivatePicker();
-    }
-
-    function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); deactivatePicker(); }
-    }
-
-
-    // ── Recording ─────────────────────────────────────────────────────────────
-
-    let recordingActive = false;
-    let recFillTimer: ReturnType<typeof setTimeout> | null = null;
-    let recFillEl: Element | null = null;
-    let recFillVal = '';
-
-    function startRecording(): void {
-      if (recordingActive) return;
-      if (pickerActive) deactivatePicker();      // modes are mutually exclusive
-      recordingActive = true;
-      void browser.storage.local.set({ pg_recording_active: true, pg_recorded_actions: [] });
-      // Record the starting page URL as the first action
-      void appendRecAction({ kind: 'goto', url: location.href, timestamp: Date.now() });
-      document.addEventListener('click',  onRecClick,  { capture: true });
-      document.addEventListener('input',  onRecInput,  { capture: true });
-      document.addEventListener('change', onRecChange, { capture: true });
-      console.info(`${LOG} recording started`);
-    }
-
-    function stopRecording(): void {
-      if (!recordingActive) return;
-      recordingActive = false;
-      flushRecFill();
-      void browser.storage.local.set({ pg_recording_active: false });
-      document.removeEventListener('click',  onRecClick,  { capture: true });
-      document.removeEventListener('input',  onRecInput,  { capture: true });
-      document.removeEventListener('change', onRecChange, { capture: true });
-      console.info(`${LOG} recording stopped`);
-    }
-
-    function flushRecFill(): void {
-      if (recFillTimer) { clearTimeout(recFillTimer); recFillTimer = null; }
-      if (recFillEl && recFillVal !== '') {
-        void appendRecAction({ kind: 'fill', attrs: extractAttributes(recFillEl), value: recFillVal, timestamp: Date.now() });
-        recFillEl = null; recFillVal = '';
-      }
-    }
-
-    async function appendRecAction(action: RecordedAction): Promise<void> {
-      const r = await browser.storage.local.get('pg_recorded_actions');
-      const prev = (r['pg_recorded_actions'] as RecordedAction[]) ?? [];
-      await browser.storage.local.set({ pg_recorded_actions: [...prev, action] });
-    }
-
-    function onRecClick(e: MouseEvent): void {
-      if (!recordingActive) return;
-      const el = e.target as Element | null;
-      if (!el) return;
-      const tag  = el.tagName.toLowerCase();
-      const type = ((el as HTMLInputElement).type ?? '').toLowerCase();
-      // Skip: checkboxes/radios (handled by change), text inputs (handled by input)
-      if (type === 'checkbox' || type === 'radio') return;
-      if ((tag === 'input' || tag === 'textarea') && !['button','submit','reset','image'].includes(type)) return;
-      if (tag === 'select') return;
-      flushRecFill();                             // commit any pending fill first
-      const dbl = (e as PointerEvent).detail === 2;
-      void appendRecAction({ kind: dbl ? 'dblclick' : 'click', attrs: extractAttributes(el), timestamp: Date.now() });
-    }
-
-    function onRecInput(e: Event): void {
-      if (!recordingActive) return;
-      const el = e.target as HTMLInputElement | HTMLTextAreaElement | null;
-      if (!el) return;
-      const tag  = el.tagName.toLowerCase();
-      const type = ((el as HTMLInputElement).type ?? 'text').toLowerCase();
-      if (tag !== 'input' && tag !== 'textarea') return;
-      if (['checkbox','radio','file','button','submit','reset'].includes(type)) return;
-      if (recFillEl && recFillEl !== el) flushRecFill();   // switched fields
-      recFillEl  = el;
-      recFillVal = el.value;
-      if (recFillTimer) clearTimeout(recFillTimer);
-      recFillTimer = setTimeout(flushRecFill, 600);        // debounce 600ms
-    }
-
-    function onRecChange(e: Event): void {
-      if (!recordingActive) return;
-      const el = e.target as HTMLElement | null;
-      if (!el) return;
-      const tag  = el.tagName.toLowerCase();
-      const type = ((el as HTMLInputElement).type ?? '').toLowerCase();
-      if (tag === 'select') {
-        const val = (el as HTMLSelectElement).value;
-        void appendRecAction({ kind: 'selectOption', attrs: extractAttributes(el), value: val, timestamp: Date.now() });
-      } else if (type === 'checkbox') {
-        const checked = (el as HTMLInputElement).checked;
-        void appendRecAction({ kind: checked ? 'check' : 'uncheck', attrs: extractAttributes(el), timestamp: Date.now() });
-      } else if (type === 'radio') {
-        void appendRecAction({ kind: 'check', attrs: extractAttributes(el), timestamp: Date.now() });
-      }
-    }
-
-    // ── Highlight ─────────────────────────────────────────────────────────
-    function ensureHighlight(): HTMLDivElement {
-      if (highlight) return highlight;
-      const el = document.createElement('div');
-      el.id = HIGHLIGHT_ID;
-      el.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;box-sizing:border-box;border:2px solid #f97316;background:rgba(249,115,22,0.12);border-radius:2px;display:none;top:0;left:0;width:0;height:0;';
-      document.documentElement.appendChild(el);
-      highlight = el;
-      return el;
-    }
-    function updateHighlight(el: Element): void {
-      const h = ensureHighlight();
-      const r = el.getBoundingClientRect();
-      if (!r.width && !r.height) { hideHighlight(); return; }
-      h.style.top = `${r.top}px`; h.style.left = `${r.left}px`;
-      h.style.width = `${r.width}px`; h.style.height = `${r.height}px`;
-      h.style.display = 'block';
-    }
-    function hideHighlight(): void { if (highlight) highlight.style.display = 'none'; }
-
-    // ── Attribute extraction ──────────────────────────────────────────────
-    function safeText(v: string | null | undefined, max = 100): string | undefined {
-      if (!v) return undefined;
-      const t = v.trim().replace(/\s+/g, ' ').slice(0, max);
-      return t || undefined;
-    }
-    function cssEsc(str: string): string {
-      try { return CSS.escape(str); } catch { return str.replace(/[^\w-]/g, c => `\\${c}`); }
-    }
-
-    function extractAttributes(el: Element): ElementAttributes {
-      const tagName = el.tagName.toLowerCase();
-      const id = el.id || undefined;
-      const role = el.getAttribute('role') ?? undefined;
-      const ariaLabel = el.getAttribute('aria-label') ?? undefined;
-      const placeholder = el.getAttribute('placeholder') ?? undefined;
-      const alt = el.getAttribute('alt') ?? undefined;
-      const title = el.getAttribute('title') ?? undefined;
-      const type = el.getAttribute('type') ?? undefined;
-      const href = el instanceof HTMLAnchorElement ? el.href || undefined : undefined;
-      const testId = el.getAttribute('data-testid') ?? el.getAttribute('data-test-id') ?? el.getAttribute('data-test') ?? undefined;
-      const innerText = safeText((el as HTMLElement).innerText);
-
-      let ariaLabelledBy: string | undefined;
-      const lbId = el.getAttribute('aria-labelledby');
-      if (lbId) {
-        const resolved = lbId.split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() || '').filter(Boolean).join(' ');
-        ariaLabelledBy = resolved || undefined;
-      }
-
-      let labelText: string | undefined;
-      if (id) {
-        try { labelText = safeText(document.querySelector<HTMLLabelElement>(`label[for="${cssEsc(id)}"]`)?.textContent); } catch { /* ignore */ }
-      }
-      if (!labelText) {
-        const parentLabel = el.closest('label');
-        if (parentLabel) {
-          const clone = parentLabel.cloneNode(true) as Element;
-          clone.querySelectorAll('input,select,textarea,button').forEach(c => c.remove());
-          labelText = safeText(clone.textContent);
-        }
-      }
-
-      const className = safeText(typeof el.className === 'string' ? el.className : undefined, 150);
-      const name      = el.getAttribute('name') ?? undefined;
-      return { tagName, id, type, role, ariaLabel, ariaLabelledBy, placeholder, alt, title, innerText, testId, labelText, href, className, name };
-    }
-
-    // ── Live accessible name (for DOM uniqueness queries) ──────────────────
-    function getLiveAccessibleName(el: Element): string {
-      const ariaLabel = el.getAttribute('aria-label');
-      if (ariaLabel?.trim()) return ariaLabel.trim();
-      const lbId = el.getAttribute('aria-labelledby');
-      if (lbId) {
-        const text = lbId.split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() || '').filter(Boolean).join(' ');
-        if (text) return text;
-      }
-      const id = el.id;
-      if (id) {
-        try { const label = document.querySelector<HTMLLabelElement>(`label[for="${cssEsc(id)}"]`); if (label?.textContent?.trim()) return label.textContent.trim(); } catch { /* ignore */ }
-      }
-      const parentLabel = el.closest('label');
-      if (parentLabel) {
-        const clone = parentLabel.cloneNode(true) as Element;
-        clone.querySelectorAll('input,select,textarea,button').forEach(c => c.remove());
-        const t = clone.textContent?.trim(); if (t) return t;
-      }
-      return (el as HTMLElement).innerText?.trim() || el.getAttribute('value') || el.getAttribute('alt') || el.getAttribute('title') || '';
-    }
-
-    // ── DOM uniqueness counting ────────────────────────────────────────────
-
-    /**
-     * Playwright's locators are visibility-aware by default — they don't
-     * match elements hidden with display:none or visibility:hidden.
-     * Our raw querySelectorAll would otherwise count both the light-mode
-     * and dark-mode versions of the same element (e.g. two <img> tags with
-     * the same alt text, one of which is display:none), producing inflated
-     * match counts and wrongly demoting good locators to "alternatives".
-     */
-    function isVisible(el: Element): boolean {
-      const s = window.getComputedStyle(el as HTMLElement);
-      if (s.display === 'none' || s.visibility === 'hidden') return false;
-      if (parseFloat(s.opacity) === 0) return false;
-      return true;
-    }
-
-    function visibleFrom(els: Iterable<Element>): Element[] {
-      return Array.from(els).filter(isVisible);
-    }
-
-    function countStepMatches(step: LocatorStep, scope: Document | Element = document): number {
-      const val = step.selectorValue.value;
-      try {
-        switch (step.kind) {
-          case 'testId':
-            return visibleFrom(scope.querySelectorAll(
-              `[data-testid="${cssEsc(val)}"],[data-test-id="${cssEsc(val)}"],[data-test="${cssEsc(val)}"]`
-            )).length;
-
-          case 'placeholder':
-            return visibleFrom(scope.querySelectorAll(`[placeholder="${cssEsc(val)}"]`)).length;
-
-          case 'altText':
-            return visibleFrom(scope.querySelectorAll(`[alt="${cssEsc(val)}"]`)).length;
-
-          case 'title':
-            return visibleFrom(scope.querySelectorAll(`[title="${cssEsc(val)}"]`)).length;
-
-          case 'label': {
-            const labels = visibleFrom(scope.querySelectorAll('label')).filter(l => l.textContent?.trim() === val);
-            const inputs = new Set<Element>();
-            for (const label of labels) {
-              const forId = label.getAttribute('for');
-              if (forId) { const inp = document.getElementById(forId); if (inp && scope.contains(inp) && isVisible(inp)) inputs.add(inp); }
-              visibleFrom(label.querySelectorAll('input,select,textarea')).forEach(i => inputs.add(i));
-            }
-            return inputs.size;
-          }
-
-          case 'text': {
-            const body = scope instanceof Document ? scope.body : scope;
-            if (!body) return -1;
-            let count = 0;
-            for (const el of body.querySelectorAll('*')) {
-              if (!isVisible(el)) continue;
-              const text = (el as HTMLElement).innerText?.trim().replace(/\s+/g, ' ');
-              if (text === val) count++;
-            }
-            return count;
-          }
-
-          case 'role': {
-            const cssSel = ROLE_CSS_SELECTORS[val];
-            const combined = cssSel ? `${cssSel},[role="${cssEsc(val)}"]` : `[role="${cssEsc(val)}"]`;
-            const nameFilter = step.options?.name;
-            const elements = visibleFrom(new Set(scope.querySelectorAll(combined)));
-            if (!nameFilter) return elements.length;
-            return elements.filter(el => getLiveAccessibleName(el).toLowerCase().includes(nameFilter.value.toLowerCase())).length;
-          }
-
-          default: return -1;
-        }
-      } catch { return -1; }
-    }
-
-    // ── Ancestor chaining ──────────────────────────────────────────────────
-    const ANCESTOR_ROLE_MAP: Record<string, string> = {
-      article: 'article', aside: 'complementary', dialog: 'dialog', form: 'form',
-      header: 'banner', footer: 'contentinfo', main: 'main', nav: 'navigation',
-      section: 'region', table: 'table', tr: 'row', td: 'cell', th: 'columnheader',
-      ul: 'list', ol: 'list', li: 'listitem',
-    };
-    function buildAncestorStep(ancestor: Element): LocatorStep | null {
-      const tag = ancestor.tagName.toLowerCase();
-      const role = ancestor.getAttribute('role') ?? ANCESTOR_ROLE_MAP[tag] ?? null;
-      if (role) {
-        const name = getLiveAccessibleName(ancestor);
-        if (name) return { kind: 'role', selectorValue: { type: 'string', value: role }, options: { name: { type: 'string', value: name } } };
-        return { kind: 'role', selectorValue: { type: 'string', value: role } };
-      }
-      const testId = ancestor.getAttribute('data-testid') ?? ancestor.getAttribute('data-test-id');
-      if (testId) return { kind: 'testId', selectorValue: { type: 'string', value: testId } };
-      return null;
-    }
-    function findUniqueAncestor(el: Element): { ancestor: Element; step: LocatorStep } | null {
-      let current = el.parentElement; let depth = 0;
-      while (current && depth < 6) {
-        const step = buildAncestorStep(current);
-        if (step && countStepMatches(step) === 1) return { ancestor: current, step };
-        current = current.parentElement; depth++;
-      }
-      return null;
-    }
-
-    // ── iframe detection ──────────────────────────────────────────────────
-    function detectFrameInfo(): FrameInfo | null {
-      if (window.self === window.top) return null;
-      let frameSelector = 'iframe';
-      try {
-        const frameEl = window.frameElement;
-        if (frameEl) {
-          if (frameEl.getAttribute('name')) frameSelector = `iframe[name="${frameEl.getAttribute('name')}"]`;
-          else if (frameEl.id) frameSelector = `iframe#${cssEsc(frameEl.id)}`;
-          else if (frameEl.getAttribute('title')) frameSelector = `iframe[title="${cssEsc(frameEl.getAttribute('title')!)}"]`;
-          else if (frameEl.getAttribute('src')) frameSelector = `iframe[src*="${(frameEl.getAttribute('src') ?? '').replace(/"/g,'').slice(0,40)}"]`;
-        } else if (window.name) frameSelector = `iframe[name="${window.name}"]`;
-        else frameSelector = `iframe[src*="${new URL(window.location.href).hostname}"]`;
-      } catch { frameSelector = window.name ? `iframe[name="${window.name}"]` : 'iframe'; }
-      return { frameSelector, frameUrl: window.location.href };
-    }
-
-    // ── Build full scored pick ─────────────────────────────────────────────
-    function buildScoredPick(el: Element): StoredPick {
-      const attrs = extractAttributes(el);
-      const frameInfo = detectFrameInfo() ?? undefined;
-      const outerHtml = safeText(el.outerHTML, 300);
-
-      const candidateSteps = buildCandidateSteps(attrs);
-      const scoredCandidates: ScoredCandidate[] = candidateSteps.map(step => ({
-        step, uniqueCount: countStepMatches(step), score: 0,
-      }));
-      for (const c of scoredCandidates) c.score = scoreCandidate(c.step, c.uniqueCount);
-      const ranked = rankCandidates(scoredCandidates);
-      const bestUnique = pickBestUnique(ranked);
-
-      let chain: LocatorChain;
-      if (bestUnique) {
-        chain = buildLocatorChain(attrs, ranked.map(c => ({ step: c.step, uniqueCount: c.uniqueCount })), { frameInfo });
-      } else {
-        const ancestorResult = findUniqueAncestor(el);
-        if (ancestorResult) {
-          const scopedCandidates: ScoredCandidate[] = candidateSteps.map(step => ({
-            step, uniqueCount: countStepMatches(step, ancestorResult.ancestor), score: 0,
-          }));
-          for (const c of scopedCandidates) c.score = scoreCandidate(c.step, c.uniqueCount);
-          chain = buildLocatorChain(attrs, scopedCandidates.map(c => ({ step: c.step, uniqueCount: c.uniqueCount })), { frameInfo, parentChain: { steps: [ancestorResult.step] } });
-        } else {
-          chain = buildLocatorChain(attrs, ranked.map(c => ({ step: c.step, uniqueCount: c.uniqueCount })), { frameInfo });
-        }
-      }
-
-      return { attributes: attrs, chain, candidates: ranked, frameInfo, outerHtml, timestamp: Date.now(), url: location.href };
-    }
+    // ── V1 raw-line recorder: RETIRED (WS9 V1 raw-line migration, DL-82) ─────
+    //
+    // What stood here was the pre-WS3 recorder: `startRecording`,
+    // `stopRecording`, `appendRecAction` and three capture listeners, writing
+    // `RecordedAction` objects into the flat `pg_recorded_actions` key. It was
+    // measured dead — the message switch above routes START_RECORDING and
+    // STOP_RECORDING to `startRecordingSession`/`stopRecordingSession`, which
+    // are the WS9 runtime, and nothing referenced these functions at all.
+    //
+    // Retiring it removes the last writer of the V1 keys, the last direct
+    // `browser.storage` call in this file, and DL-4's hard-coded 600 ms fill
+    // debounce, which contradicted `RECORDING_LIMITS.fillDebounceMs` (500).
+    //
+    // THE STORED DATA IS NOT TOUCHED. `pg_recording_active` and
+    // `pg_recorded_actions` stay exactly as they are on every install that has
+    // them; a V1 action carries no verdict, no match counts and no rationale,
+    // so it cannot become a verified `RecordedStep` without fabricating the
+    // evidence. Migration is recorded as DEFERRED, not done. See DL-82.
   },
 });

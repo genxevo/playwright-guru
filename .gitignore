@@ -46,3 +46,21 @@ desktop.ini
 tmp/
 *.zip
 *.crx
+
+# ─── WS9 Decision A — the E2E-only recording-enabled artifact ───────────────
+# `pnpm build:e2e` writes here. It is the production extension with ONE module
+# substituted (`src/config/recording.ts` -> `test/e2e/recording-enabled.config.ts`),
+# so it is an artifact in which RECORDING IS ENABLED. It must never be committed,
+# never be published, and never be confused with `.output/`, which is what ships.
+# It is a SIBLING of `.output`, not a child, so `.output/` above does not cover it.
+.output-e2e/
+
+# ─── Local gate backups and Claude session outputs ─────────────────────────
+# Phase A0 (2026-09-06). The per-gate backup archives (~42 MB) live here so the
+# repository root stays readable. `*.zip` above already covers them by
+# extension; this names the folder so the intent survives a future edit to that
+# rule, and so anything non-zip dropped in it is ignored too.
+# The HISTORICAL GATE REPORTS are deliberately NOT here — they are committed
+# under `docs/archive/`, because MASTER-ROADMAP.md and DECISION-LOG.md cite them
+# by name and a clone must not lose the audit trail.
+Claude outputs/

@@ -18,7 +18,7 @@
  *
  *   TabPickSource
  *     kind: 'tab'
- *     Reads the tab-scoped `PickSnapshot` from session storage, subscribes to
+ *     Reads the tab-scoped `StoredPick` from session storage, subscribes to
  *     storage changes, and activates the picker through the CommandBus.
  *     capabilities: canActivatePicker ✓  canRecord ✓  canCaptureAssertion ✓
  *
@@ -44,9 +44,28 @@
  * The boundary and its contract, deliberately without implementations. Adding
  * stubs that throw would be worse than an empty directory: they invite call
  * sites that compile and fail at runtime.
+ *
+ * IMPLEMENTED — WS5
+ *
+ *   BrowserClipboardAdapter (`./ClipboardAdapter`)
+ *     The first port implementation to actually land here. Real
+ *     `navigator.clipboard.writeText`, typed failure instead of an uncaught
+ *     rejection. Consumed by `src/ui/primitives.tsx` (`CopyButton`) and by
+ *     both panels' "Copy All" actions.
+ *
+ *   TabPickSource / DevtoolsPickSource — STILL PLANNED, NOT IMPLEMENTED.
+ *     `PickSource.getCurrent()`/`subscribe()` are now typed against
+ *     `StoredPick` (corrected DL-55, owner-decision gate) — the type
+ *     conflict that previously blocked an honest implementation is
+ *     resolved. What remains is simply that no implementation exists yet:
+ *     building `TabPickSource`/`DevtoolsPickSource` (session-storage
+ *     wiring, the CommandBus question, Elements-panel selection sync) is
+ *     unstarted WS5 work, not a blocked contract. Not implemented by this
+ *     gate — a documentation/contract correction only.
  */
 
 export type { PickSource, PickSourceKind, PickSourceCapabilities } from '../ports/PickSource';
+export { BrowserClipboardAdapter, clipboardPort } from './ClipboardAdapter';
 
 /**
  * Capability profiles, declared here so both surfaces cannot drift apart by

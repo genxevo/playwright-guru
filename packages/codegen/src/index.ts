@@ -80,6 +80,17 @@ function prependFrameLocator(
   }
 }
 
+/**
+ * The ONE string-escaping policy, re-exported for consumers that render code
+ * AROUND a locator rather than inside one — WS9's recording renderer needs to
+ * embed `fill` values and `goto` URLs in the same literals the four renderers
+ * already produce. Exporting it is what keeps that from becoming a second,
+ * weaker escaper: the legacy `ui/recording/test-code.ts` hand-rolled one that
+ * escapes only the quote character, leaving a backslash or newline to break the
+ * statement it was building.
+ */
+export { escapeForQuotedString, singleQuoted, doubleQuoted } from './internal/format';
+
 // Re-export types so consumers can import everything from a single entry point
 export type {
   LocatorChain,

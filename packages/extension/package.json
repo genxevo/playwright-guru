@@ -2,16 +2,19 @@
   "name": "@playwright-guru/extension",
   "version": "0.1.0",
   "private": true,
-  "description": "Playwright Guru browser extension — the WXT/Manifest V3 runtime that wraps locator-engine and codegen into an installable Chrome extension.",
+  "description": "Playwright Guru browser extension \u2014 the WXT/Manifest V3 runtime that wraps locator-engine and codegen into an installable Chrome extension.",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:e2e": "wxt build -c wxt.e2e.config.ts",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "clean": "rm -rf .wxt .output"
+    "clean": "rm -rf .wxt .output .output-e2e",
+    "package": "node scripts/validate-package.mjs",
+    "test:e2e": "node --test --test-concurrency=1 test/e2e/*.e2e.mjs"
   },
   "dependencies": {
     "@playwright-guru/locator-engine": "workspace:*",

@@ -86,6 +86,33 @@ export interface ProbeError {
 export interface ProbeCount {
   total: number;
   visible: number;
+  /**
+   * An opaque handle to the ONE element this query matched (WS6.2, D2).
+   *
+   * WHY IT IS ON THE COUNT, AND WHY IT IS NOT A SIXTH QUERY METHOD.
+   * `ResolveResult.stepCounts`' own WS0 doc comment states the prerequisite for
+   * scoped chain resolution: "requires the probe to return scope handles for
+   * matched elements". This field is that return, added to the value the query
+   * already produces rather than as a new question. The port keeps its five
+   * locator queries and its one scope-lifecycle member; nothing was added to
+   * either group, and no method signature changed.
+   *
+   * PRESENT ONLY WHEN `visible === 1`. A handle is a claim that the caller may
+   * look *inside a specific element*, and that claim is only true when exactly
+   * one element was matched. Zero matches and two-or-more matches both leave
+   * this `undefined`, so a chained step can never be given an arbitrary parent
+   * to search within. `measuredCount` enforces the rule in one place.
+   *
+   * OPTIONAL BY DESIGN. A probe that cannot mint handles simply omits it, and
+   * `resolveChain` then refuses to narrow rather than falling back to a
+   * document-wide query — see its ambiguity policy. Absence costs honesty in
+   * one direction only: an `unsupported` answer, never a fabricated `verified`.
+   *
+   * RUNTIME-ONLY, exactly like `ScopeHandle` itself: it must never reach a
+   * snapshot, a message or persisted state. `snapshot.ts`'s `containsScopeHandle`
+   * guard covers it structurally wherever a `ProbeCount` could be forwarded.
+   */
+  scope?: ScopeHandle;
   /** Present when the probe could not answer. Counts are then meaningless. */
   error?: ProbeError;
 }
@@ -159,7 +186,14 @@ export function unknownCount(error?: ProbeError): ProbeCount {
   return { total: UNKNOWN_MATCH_COUNT, visible: UNKNOWN_MATCH_COUNT, ...(error ? { error } : {}) };
 }
 
-/** Convenience for implementations that measured both figures. */
-export function measuredCount(total: number, visible: number): ProbeCount {
-  return { total, visible };
+/**
+ * Convenience for implementations that measured both figures.
+ *
+ * THE ONE PLACE THE SCOPE RULE IS ENFORCED. A `scope` offered here is attached
+ * only when `visible === 1`; otherwise it is dropped. Every implementation mints
+ * through this function, so no probe can hand the resolver a handle to "one of
+ * the matches" — the situation in which choosing a parent would be a guess.
+ */
+export function measuredCount(total: number, visible: number, scope?: ScopeHandle): ProbeCount {
+  return { total, visible, ...(scope && visible === 1 ? { scope } : {}) };
 }

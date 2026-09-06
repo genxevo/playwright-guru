@@ -32,6 +32,20 @@
  * WS9; guided assertion capture is WS10.
  */
 
+/**
+ * Whether the product exposes recording at all.
+ *
+ * This is the flag the blueprint names as WS9's rollback mechanism — "a
+ * build-time flag hides the Record button entirely; everything else is
+ * unaffected". It is off for the v0.1.0 Developer Preview because the legacy
+ * recorder is not reachable: `content.ts` has no `START_RECORDING` case, so the
+ * control could report success while capturing nothing.
+ *
+ * WS9 turns recording on by flipping this constant, once the recorder, the
+ * activation handshake and the heartbeat exist. Nothing else needs to change.
+ */
+export const RECORDING_ENABLED = false;
+
 export const RECORDING_LIMITS = {
   /** Counter turns amber. Recording continues uninterrupted. */
   warnAt: 40,
@@ -41,6 +55,21 @@ export const RECORDING_LIMITS = {
 
   /** Captured input values are truncated to this length before storage. */
   maxValueLength: 500,
+
+  /**
+   * The ceiling for one serialised `RecordedWorkflow` (WS9).
+   *
+   * MASTER-ROADMAP §WS9's Exit criterion states it directly: "workflow ≤500 KB
+   * at 100 actions". It lives here rather than in the workflow model because
+   * this file's own contract — stated at the top — is that no other module may
+   * define, hard-code or duplicate a recording limit.
+   *
+   * It is a REPORTING budget, not a truncating one: `assessWorkflowBudget`
+   * measures and says so. Silently dropping actions to fit a number would make
+   * the workflow a misleading record of what the user did, which is the same
+   * failure class the verification work spent WS6.2 removing.
+   */
+  maxWorkflowBytes: 500 * 1024,
 
   /** Consecutive edits to one field coalesce into a single `fill`. */
   fillDebounceMs: 500,

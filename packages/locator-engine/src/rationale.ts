@@ -46,6 +46,10 @@ export const RATIONALE_CODES = [
   'TEST_ID',
   'UNIQUE_VISIBLE',
   'USER_FACING',
+  // Stage 2. The ranking policy follows Playwright's own generator order, so
+  // it must be able to say so — otherwise the recommendation is an assertion
+  // rather than an explanation.
+  'PLAYWRIGHT_PREFERRED',
   'SEMANTIC_HTML',
 
   // Structural — what the engine had to do to make it unique

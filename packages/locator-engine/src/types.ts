@@ -136,6 +136,24 @@ export interface ElementAttributes {
   className?: string;
   /** The name attribute — common on form elements like input, select, textarea. */
   name?: string;
+
+  // ── Facts the capture layer must resolve, because role rules depend on them
+  //    and the domain layer may never touch a live DOM (R3).
+
+  /** The `list` attribute value on an input, if present. */
+  list?: string;
+  /**
+   * Whether `list` actually resolves to a `<datalist>`.
+   *
+   * Playwright checks the referenced element's tag before promoting an input
+   * to `combobox`; a `list` pointing at a `<div>` changes nothing. The domain
+   * cannot follow that reference itself, so capture resolves it here.
+   */
+  listIsDatalist?: boolean;
+  /** `<select multiple>`. */
+  multiple?: boolean;
+  /** The `size` attribute on a `<select>`, parsed. */
+  size?: number;
 }
 
 /**

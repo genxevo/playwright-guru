@@ -1,0 +1,459 @@
+{
+  "$schema": "playwright-conformance-golden/1",
+  "generatedBy": "refresh-golden.mjs",
+  "playwrightVersion": "1.62.1",
+  "chromiumRevision": "bundled with the above playwright release",
+  "note": "Observed behaviour of real Playwright against real Chromium. Do not hand-edit; regenerate.",
+  "roles": {
+    "button element": {
+      "html": "<button id=\"t\">Save</button>",
+      "attrs": {
+        "tagName": "button",
+        "innerText": "Save"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "input type=button": {
+      "html": "<input id=\"t\" type=\"button\" value=\"Save\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "button",
+        "value": "Save"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "input type=submit": {
+      "html": "<input id=\"t\" type=\"submit\" value=\"Go\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "submit",
+        "value": "Go"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "input type=image": {
+      "html": "<input id=\"t\" type=\"image\" alt=\"Search\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "image",
+        "alt": "Search"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "anchor with href": {
+      "html": "<a id=\"t\" href=\"/docs\">Docs</a>",
+      "attrs": {
+        "tagName": "a",
+        "href": "/docs",
+        "innerText": "Docs"
+      },
+      "playwrightRoles": ["link"],
+      "playwrightRole": "link",
+      "ambiguous": false
+    },
+    "anchor without href": {
+      "html": "<a id=\"t\">Docs</a>",
+      "attrs": {
+        "tagName": "a",
+        "innerText": "Docs"
+      },
+      "playwrightRoles": [],
+      "playwrightRole": null,
+      "ambiguous": false
+    },
+    "input type=text": {
+      "html": "<input id=\"t\" type=\"text\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "text"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input with no type attribute": {
+      "html": "<input id=\"t\">",
+      "attrs": {
+        "tagName": "input"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=email": {
+      "html": "<input id=\"t\" type=\"email\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "email"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=tel": {
+      "html": "<input id=\"t\" type=\"tel\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "tel"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=url": {
+      "html": "<input id=\"t\" type=\"url\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "url"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=search": {
+      "html": "<input id=\"t\" type=\"search\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "search"
+      },
+      "playwrightRoles": ["searchbox"],
+      "playwrightRole": "searchbox",
+      "ambiguous": false
+    },
+    "input type=password (E6 — must remain textbox)": {
+      "html": "<input id=\"t\" type=\"password\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "password"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "textarea": {
+      "html": "<textarea id=\"t\"></textarea>",
+      "attrs": {
+        "tagName": "textarea"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=date (E5)": {
+      "html": "<input id=\"t\" type=\"date\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "date"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=time (E5)": {
+      "html": "<input id=\"t\" type=\"time\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "time"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=month (E5)": {
+      "html": "<input id=\"t\" type=\"month\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "month"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=week (E5)": {
+      "html": "<input id=\"t\" type=\"week\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "week"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=datetime-local (E5)": {
+      "html": "<input id=\"t\" type=\"datetime-local\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "datetime-local"
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=file (N-1)": {
+      "html": "<input id=\"t\" type=\"file\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "file"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "input type=text with datalist (N-2)": {
+      "html": "<input id=\"t\" type=\"text\" list=\"l\"><datalist id=\"l\"><option value=\"a\"></option></datalist>",
+      "attrs": {
+        "tagName": "input",
+        "type": "text",
+        "list": "l",
+        "listIsDatalist": true
+      },
+      "playwrightRoles": ["combobox"],
+      "playwrightRole": "combobox",
+      "ambiguous": false
+    },
+    "input type=email with datalist (N-2)": {
+      "html": "<input id=\"t\" type=\"email\" list=\"l\"><datalist id=\"l\"><option value=\"a\"></option></datalist>",
+      "attrs": {
+        "tagName": "input",
+        "type": "email",
+        "list": "l",
+        "listIsDatalist": true
+      },
+      "playwrightRoles": ["combobox"],
+      "playwrightRole": "combobox",
+      "ambiguous": false
+    },
+    "input type=search with datalist (N-2)": {
+      "html": "<input id=\"t\" type=\"search\" list=\"l\"><datalist id=\"l\"><option value=\"a\"></option></datalist>",
+      "attrs": {
+        "tagName": "input",
+        "type": "search",
+        "list": "l",
+        "listIsDatalist": true
+      },
+      "playwrightRoles": ["combobox"],
+      "playwrightRole": "combobox",
+      "ambiguous": false
+    },
+    "input with list pointing at a non-datalist": {
+      "html": "<input id=\"t\" type=\"text\" list=\"l\"><div id=\"l\"></div>",
+      "attrs": {
+        "tagName": "input",
+        "type": "text",
+        "list": "l",
+        "listIsDatalist": false
+      },
+      "playwrightRoles": ["textbox"],
+      "playwrightRole": "textbox",
+      "ambiguous": false
+    },
+    "input type=checkbox": {
+      "html": "<input id=\"t\" type=\"checkbox\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "checkbox"
+      },
+      "playwrightRoles": ["checkbox"],
+      "playwrightRole": "checkbox",
+      "ambiguous": false
+    },
+    "input type=radio": {
+      "html": "<input id=\"t\" type=\"radio\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "radio"
+      },
+      "playwrightRoles": ["radio"],
+      "playwrightRole": "radio",
+      "ambiguous": false
+    },
+    "input type=range": {
+      "html": "<input id=\"t\" type=\"range\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "range"
+      },
+      "playwrightRoles": ["slider"],
+      "playwrightRole": "slider",
+      "ambiguous": false
+    },
+    "input type=number": {
+      "html": "<input id=\"t\" type=\"number\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "number"
+      },
+      "playwrightRoles": ["spinbutton"],
+      "playwrightRole": "spinbutton",
+      "ambiguous": false
+    },
+    "input type=hidden": {
+      "html": "<input id=\"t\" type=\"hidden\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "hidden"
+      },
+      "playwrightRoles": [],
+      "playwrightRole": null,
+      "ambiguous": false
+    },
+    "input type=reset": {
+      "html": "<input id=\"t\" type=\"reset\">",
+      "attrs": {
+        "tagName": "input",
+        "type": "reset"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "select (single)": {
+      "html": "<select id=\"t\"><option>a</option></select>",
+      "attrs": {
+        "tagName": "select"
+      },
+      "playwrightRoles": ["combobox"],
+      "playwrightRole": "combobox",
+      "ambiguous": false
+    },
+    "select multiple (E5)": {
+      "html": "<select id=\"t\" multiple><option>a</option></select>",
+      "attrs": {
+        "tagName": "select",
+        "multiple": true
+      },
+      "playwrightRoles": ["listbox"],
+      "playwrightRole": "listbox",
+      "ambiguous": false
+    },
+    "select size=4 (E5)": {
+      "html": "<select id=\"t\" size=\"4\"><option>a</option></select>",
+      "attrs": {
+        "tagName": "select",
+        "size": 4
+      },
+      "playwrightRoles": ["listbox"],
+      "playwrightRole": "listbox",
+      "ambiguous": false
+    },
+    "select size=1": {
+      "html": "<select id=\"t\" size=\"1\"><option>a</option></select>",
+      "attrs": {
+        "tagName": "select",
+        "size": 1
+      },
+      "playwrightRoles": ["combobox"],
+      "playwrightRole": "combobox",
+      "ambiguous": false
+    },
+    "div with explicit role=button": {
+      "html": "<div id=\"t\" role=\"button\">Go</div>",
+      "attrs": {
+        "tagName": "div",
+        "role": "button",
+        "innerText": "Go"
+      },
+      "playwrightRoles": ["button"],
+      "playwrightRole": "button",
+      "ambiguous": false
+    },
+    "plain div": {
+      "html": "<div id=\"t\">Hello</div>",
+      "attrs": {
+        "tagName": "div",
+        "innerText": "Hello"
+      },
+      "playwrightRoles": [],
+      "playwrightRole": null,
+      "ambiguous": false
+    },
+    "img with alt": {
+      "html": "<img id=\"t\" alt=\"Logo\" src=\"x.png\">",
+      "attrs": {
+        "tagName": "img",
+        "alt": "Logo"
+      },
+      "playwrightRoles": ["img"],
+      "playwrightRole": "img",
+      "ambiguous": false
+    },
+    "img with empty alt": {
+      "html": "<img id=\"t\" alt=\"\" src=\"x.png\">",
+      "attrs": {
+        "tagName": "img",
+        "alt": ""
+      },
+      "playwrightRoles": ["presentation"],
+      "playwrightRole": null,
+      "ambiguous": false
+    },
+    "heading": {
+      "html": "<h2 id=\"t\">Title</h2>",
+      "attrs": {
+        "tagName": "h2",
+        "innerText": "Title"
+      },
+      "playwrightRoles": ["heading"],
+      "playwrightRole": "heading",
+      "ambiguous": false
+    }
+  },
+  "labels": {
+    "exact match": {
+      "label": "Email Address",
+      "query": "Email Address",
+      "matchesDefault": true,
+      "matchesExact": true
+    },
+    "different case": {
+      "label": "Email Address",
+      "query": "email address",
+      "matchesDefault": true,
+      "matchesExact": false
+    },
+    "substring": {
+      "label": "Email Address",
+      "query": "Email",
+      "matchesDefault": true,
+      "matchesExact": false
+    },
+    "substring, wrong case": {
+      "label": "Email Address",
+      "query": "EMAIL",
+      "matchesDefault": true,
+      "matchesExact": false
+    },
+    "surrounding whitespace in the label": {
+      "label": "  Email Address  ",
+      "query": "Email Address",
+      "matchesDefault": true,
+      "matchesExact": true
+    },
+    "query with surrounding whitespace": {
+      "label": "Email Address",
+      "query": "  Email  ",
+      "matchesDefault": true,
+      "matchesExact": false
+    },
+    "non-matching": {
+      "label": "Email Address",
+      "query": "Password",
+      "matchesDefault": false,
+      "matchesExact": false
+    },
+    "inner whitespace collapsed": {
+      "label": "Email    Address",
+      "query": "Email Address",
+      "matchesDefault": true,
+      "matchesExact": true
+    }
+  }
+}

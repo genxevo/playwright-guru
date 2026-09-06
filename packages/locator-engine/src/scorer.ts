@@ -4,17 +4,18 @@
  * Generates all plausible LocatorStep candidates for an element and ranks
  * them once the content script has supplied per-candidate DOM match counts.
  *
- * Scoring philosophy:
- *   • A unique match (count === 1) earns a large bonus so it always
- *     outranks any non-unique candidate of equal strategy type.
- *   • Within tied uniqueness, user-facing contracts (role, label) beat
- *     fragile attribute contracts (testId, title).
- *   • A zero-match candidate (broken locator) is heavily penalised but kept
- *     in the ranked list so the caller can see what was tried.
+ * Scoring philosophy — see ./ranking.ts for the policy and its evidence:
+ *   • How well a candidate resolves dominates everything. A unique locator of
+ *     any kind outranks an ambiguous one of any kind.
+ *   • Within a tier, strategies are preferred in the order Playwright's own
+ *     selectorGenerator prefers them — test id first, then role, and so on.
+ *   • A zero-match candidate is kept in the list, ranked last, so the caller
+ *     can still see what was tried.
  */
 
 import type { LocatorStep, ElementAttributes } from './types';
-import { getImplicitRole, computeAccessibleName } from './accessibility';
+import { resolveRole, computeAccessibleName } from './accessibility';
+import { scoreForRanking } from './ranking';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -22,39 +23,38 @@ export interface ScoredCandidate {
   step: LocatorStep;
   /** Number of DOM elements this locator matches. -1 = unknown. */
   uniqueCount: number;
+  /**
+   * How many elements Playwright's locator for this strategy would actually
+   * resolve, which is not always `uniqueCount`.
+   *
+   * `getByRole` filters by accessibility-tree membership, so for it the two are
+   * the same. The other six `getBy*` strategies match hidden elements, so a
+   * locator can look uniquely visible while Playwright resolves several and
+   * throws a strict-mode violation. Optional because not every surface measures
+   * it — the DevTools panel builds candidates from its own eval and omits it,
+   * and consumers must treat `undefined` as "not measured", never as zero.
+   *
+   * Purely informational: scoring and ranking read `uniqueCount` only.
+   */
+  totalCount?: number;
   /** Computed score. Higher = better. */
   score: number;
 }
 
-// ─── Scoring weights ───────────────────────────────────────────────────────
-
-/** Base score for each locator strategy (before uniqueness bonus). */
-const BASE_SCORES: Record<LocatorStep['kind'], number> = {
-  role:        1_000,
-  label:         900,
-  placeholder:   800,
-  text:          700,
-  altText:       600,
-  title:         500,
-  testId:        400,
-};
-
-/** Bonus added when a candidate uniquely matches exactly one element. */
-const UNIQUE_BONUS   = 10_000;
-/** Penalty per extra element beyond the first (non-unique match). */
-const AMBIGUITY_COST =    100;
-/** Penalty for a locator that matches nothing (broken). */
-const NO_MATCH_PENALTY = 5_000;
+// ─── Scoring ───────────────────────────────────────────────────────────────
+//
+// The policy, its Playwright evidence and the score direction all live in
+// ./ranking.ts. Nothing here invents a number.
 
 /**
- * Calculates the final score for a candidate given its DOM match count.
+ * Scores a candidate given how many elements it matched. **Higher is better.**
+ *
+ * Delegates to the ranking policy so there is exactly one place where strategy
+ * preference is decided — the previous magic-number table disagreed with
+ * Playwright's own generator on test-ids and nothing caught it.
  */
 export function scoreCandidate(step: LocatorStep, uniqueCount: number): number {
-  const base = BASE_SCORES[step.kind] ?? 0;
-  if (uniqueCount === 1)  return base + UNIQUE_BONUS;
-  if (uniqueCount === 0)  return base - NO_MATCH_PENALTY;
-  if (uniqueCount < 0)    return base;           // unknown: fall back to base score
-  return base - (uniqueCount - 1) * AMBIGUITY_COST;
+  return scoreForRanking(step.kind, uniqueCount);
 }
 
 // ─── Candidate generation ──────────────────────────────────────────────────
@@ -73,7 +73,7 @@ const NON_INTERACTIVE_TAGS = new Set([
  * then `scoreCandidate` and `rankCandidates` select the winner.
  */
 export function buildCandidateSteps(attrs: ElementAttributes): LocatorStep[] {
-  const role          = attrs.role ?? getImplicitRole(attrs);
+  const role          = resolveRole(attrs);
   const accessibleName = computeAccessibleName(attrs);
   const candidates: LocatorStep[] = [];
   const tag = attrs.tagName.toLowerCase();

@@ -58,11 +58,28 @@ const TAG_TO_ROLE: Readonly<Record<string, string>> = {
  * Returns the implicit ARIA role for an element given its extracted attributes,
  * or `null` if the element has no meaningful implicit role (e.g., `<div>`).
  */
+/**
+ * Input types Playwright will promote to `combobox` when they are backed by a
+ * `<datalist>`. Matches its own whitelist: email, search, tel, text, url and
+ * the empty (absent) type.
+ */
+const COMBOBOX_ELIGIBLE_INPUT_TYPES = new Set(['text', 'email', 'search', 'tel', 'url', '']);
+
 export function getImplicitRole(attrs: ElementAttributes): string | null {
   const tag = attrs.tagName.toLowerCase();
 
   if (tag === 'input') {
-    switch ((attrs.type ?? 'text').toLowerCase()) {
+    const type = (attrs.type ?? 'text').toLowerCase();
+
+    // A `list` pointing at a real <datalist> makes the input a combobox — but
+    // ONLY for the text-like types. Playwright resolves the reference before
+    // deciding, so a `list` aimed at a <div> changes nothing. Verified against
+    // playwright-core 1.62.1 (see test/conformance).
+    if (COMBOBOX_ELIGIBLE_INPUT_TYPES.has(type) && attrs.listIsDatalist === true) {
+      return 'combobox';
+    }
+
+    switch (type) {
       case 'button': case 'submit': case 'reset': case 'image': return 'button';
       case 'checkbox':  return 'checkbox';
       case 'radio':     return 'radio';
@@ -70,8 +87,21 @@ export function getImplicitRole(attrs: ElementAttributes): string | null {
       case 'number':    return 'spinbutton';
       case 'search':    return 'searchbox';
       case 'hidden':    return null;
-      default:          return 'textbox'; // text/email/tel/url/password/…
+      // N-1. Playwright reports `button` for a file input, not `textbox`.
+      // getByRole('textbox') will not find one; getByRole('button') will.
+      case 'file':      return 'button';
+      // Everything else — including password, date, time, month, week and
+      // datetime-local — falls through to textbox, matching Playwright's own
+      // `inputTypeToRole[type] || 'textbox'` fallback. This is why E6 is
+      // closed: password IS a textbox in Playwright.
+      default:          return 'textbox';
     }
+  }
+
+  if (tag === 'select') {
+    // Playwright: multiple || size > 1 ? 'listbox' : 'combobox'.
+    // Guru previously said combobox for every select.
+    return attrs.multiple === true || (attrs.size ?? 1) > 1 ? 'listbox' : 'combobox';
   }
 
   if (tag === 'a' || tag === 'area') {
@@ -99,11 +129,11 @@ export const ROLE_CSS_SELECTORS: Readonly<Record<string, string>> = {
   alertdialog:   '[role="alertdialog"]',
   article:       'article, [role="article"]',
   banner:        'header, [role="banner"]',
-  button:        'button, summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], input[type="image"]',
+  button:        'button, summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], input[type="image"], input[type="file"]',
   cell:          'td, [role="cell"]',
   checkbox:      'input[type="checkbox"], [role="checkbox"]',
   columnheader:  'th, [role="columnheader"]',
-  combobox:      'select, [role="combobox"]',
+  combobox:      'select:not([multiple]):not([size]), select[size="1"], input[list], [role="combobox"]',
   complementary: 'aside, [role="complementary"]',
   contentinfo:   'footer, [role="contentinfo"]',
   dialog:        'dialog, [role="dialog"]',
@@ -116,7 +146,7 @@ export const ROLE_CSS_SELECTORS: Readonly<Record<string, string>> = {
   img:           'img:not([alt=""]), [role="img"]',
   link:          'a[href], area[href], [role="link"]',
   list:          'ul, ol, menu, [role="list"]',
-  listbox:       'select[size], select[multiple], [role="listbox"]',
+  listbox:       'select[multiple], select[size]:not([size="1"]), [role="listbox"]',
   listitem:      'li, [role="listitem"]',
   main:          'main, [role="main"]',
   math:          'math, [role="math"]',
@@ -132,7 +162,7 @@ export const ROLE_CSS_SELECTORS: Readonly<Record<string, string>> = {
   row:           'tr, [role="row"]',
   rowgroup:      'tbody, thead, tfoot, [role="rowgroup"]',
   rowheader:     '[role="rowheader"]',
-  searchbox:     'input[type="search"], [role="searchbox"]',
+  searchbox:     'input[type="search"]:not([list]), [role="searchbox"]',
   separator:     'hr, [role="separator"]',
   slider:        'input[type="range"], [role="slider"]',
   spinbutton:    'input[type="number"], [role="spinbutton"]',
@@ -142,7 +172,11 @@ export const ROLE_CSS_SELECTORS: Readonly<Record<string, string>> = {
   tablist:       '[role="tablist"]',
   tabpanel:      '[role="tabpanel"]',
   table:         'table, [role="table"]',
-  textbox:       'textarea, input:not([type]), input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="tel"], input[type="url"], input[type="number"], [role="textbox"]',
+  // E5. Adds the date/time family, which Playwright resolves to textbox via its
+  // `|| 'textbox'` fallback. Removes `search` and `number`, which have their own
+  // roles (searchbox / spinbutton) and were being double-claimed here. Inputs
+  // carrying a `list` are excluded — a datalist makes them a combobox (N-2).
+  textbox:       'textarea, input:not([type]):not([list]), input[type="text"]:not([list]), input[type="email"]:not([list]), input[type="tel"]:not([list]), input[type="url"]:not([list]), input[type="password"], input[type="date"], input[type="time"], input[type="month"], input[type="week"], input[type="datetime-local"], [role="textbox"]',
   tooltip:       '[role="tooltip"]',
   tree:          '[role="tree"]',
   treeitem:      '[role="treeitem"]',
@@ -204,4 +238,19 @@ export function computeAccessibleName(attrs: ElementAttributes): string | undefi
   if (text) return text;
 
   return undefined;
+}
+
+/**
+ * The element's effective ARIA role: an explicit `role` attribute if present,
+ * otherwise the implicit role.
+ *
+ * This existed as `attrs.role ?? getImplicitRole(attrs)` in both `scorer.ts`
+ * and `engine.ts`. Two copies of one rule is precisely how E2 and E4 came to be
+ * fixed in one place and left live in another, so there is now exactly one.
+ * The conformance suite tests THIS function, so what is verified is what the
+ * product actually uses.
+ */
+export function resolveRole(attrs: ElementAttributes): string | null {
+  const explicit = attrs.role?.trim();
+  return explicit ? explicit : getImplicitRole(attrs);
 }

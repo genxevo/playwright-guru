@@ -17,7 +17,7 @@ import {
   pickBestUnique,
   type ScoredCandidate,
 } from './scorer';
-import { getImplicitRole, computeAccessibleName } from './accessibility';
+import { resolveRole, computeAccessibleName } from './accessibility';
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -108,7 +108,7 @@ export function getElementDescription(attrs: ElementAttributes): string {
 // ─── Internal helpers ──────────────────────────────────────────────────────
 
 function fallbackChain(attrs: ElementAttributes, options: ChainOptions): LocatorChain {
-  const role = attrs.role ?? getImplicitRole(attrs);
+  const role = resolveRole(attrs);
   const name = computeAccessibleName(attrs);
 
   const step: LocatorStep = role

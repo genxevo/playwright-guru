@@ -1,0 +1,309 @@
+/**
+ * Playwright Guru — Design Tokens (WS2 · item 1, tokens foundation)
+ * ===================================================================
+ *
+ * THE SINGLE SOURCE OF VISUAL TRUTH.
+ *
+ * This file is the one place hardcoded colour, type-scale, spacing and
+ * radius values are allowed to live. Every rendered UI surface
+ * (`src/ui/**`, `entrypoints/sidepanel/**`, `entrypoints/devtools-panel/**`)
+ * consumes these through `var(--pg-*)` — the WS2 exit criterion is
+ * "zero hardcoded hex outside tokens.css in the agreed UI scope".
+ *
+ * DESIGN NOTES
+ *  - These are SEMANTIC tokens (role names: bg / surface / border / text /
+ *    success / info / warning / danger / accent), not a 1:1 dump of the 73
+ *    literals the panels used. Values are drawn from the *existing* palette so
+ *    migration preserves the current look — this is tokenisation, not a
+ *    redesign.
+ *  - Three theme states, per the standard pattern:
+ *      • bare :root                                   → light (the default, and
+ *        also what an explicit data-theme='light' resolves to — see the note
+ *        at the foot of the file; no separate light block is needed)
+ *      • @media(dark) :root:not([data-theme=light])   → system dark
+ *      • :root[data-theme=dark]                       → explicit dark wins
+ *  - Theme-INVARIANT tokens (typography, spacing, radius, and the VS Code-style
+ *    code-preview palette) are declared once on :root and never overridden. The
+ *    code block is intentionally dark in both themes — that is its existing look.
+ *  - Every foreground/background PAIR named below is verified ≥ 4.5:1 (WCAG AA)
+ *    by `test/tokens.test.ts`. Solid-fill + on-solid text pairs are deferred to
+ *    WS2 Phase B/C, where token values may be adjusted against real usage.
+ */
+
+:root {
+  /* ── Typography (theme-invariant) ───────────────────────────────────── */
+  --pg-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --pg-font-mono: 'Consolas', 'SF Mono', 'Monaco', 'Courier New', monospace;
+
+  /* Base is 12px; --pg-font-size-xs (11px) is the enforced MINIMUM. No 9px. */
+  --pg-font-size-xs: 11px;
+  --pg-font-size-sm: 12px;
+  --pg-font-size-base: 12px;
+  --pg-font-size-md: 13px;
+  --pg-font-size-lg: 15px;
+  --pg-font-size-xl: 18px;
+
+  --pg-line-height-tight: 1.3;
+  --pg-line-height-normal: 1.5;
+
+  --pg-font-weight-normal: 400;
+  --pg-font-weight-medium: 500;
+  --pg-font-weight-semibold: 600;
+  --pg-font-weight-bold: 700;
+
+  /* ── Spacing (4px scale, theme-invariant) ───────────────────────────── */
+  --pg-space-1: 4px;
+  --pg-space-2: 8px;
+  --pg-space-3: 12px;
+  --pg-space-4: 16px;
+  --pg-space-5: 24px;
+
+  /* ── Radius (theme-invariant) ───────────────────────────────────────── */
+  --pg-radius-sm: 3px;
+  --pg-radius-md: 6px;
+  --pg-radius-lg: 10px;
+
+  /* ── Code preview palette (theme-invariant; VS Code dark) ───────────── */
+  --pg-code-bg: #1e1e1e;
+  --pg-code-surface: #252526;
+  --pg-code-line: #2a2d2e;
+  --pg-code-text: #d4d4d4;
+  --pg-code-keyword: #569cd6;
+  --pg-code-string: #ce9178;
+  --pg-code-comment: #6a9955;
+
+  /* ── Colour — LIGHT (default) ───────────────────────────────────────── */
+  /* Neutrals / surfaces */
+  --pg-color-bg: #f8fafc;
+  --pg-color-surface: #ffffff;
+  --pg-color-surface-sunken: #f1f5f9;
+  --pg-color-border: #e2e8f0;
+  --pg-color-border-strong: #cbd5e1;
+  --pg-color-text: #1e293b;
+  --pg-color-text-muted: #475569;
+  --pg-color-text-subtle: #64748b;
+  --pg-color-text-inverse: #ffffff;
+
+  /* Success / Playwright (green) */
+  --pg-color-success: #16a34a;
+  --pg-color-success-strong: #166534;
+  --pg-color-success-tint: #dcfce7;
+  --pg-color-success-border: #bbf7d0;
+  --pg-color-success-text: #166534;
+
+  /* Info / CSS (blue) */
+  --pg-color-info: #2563eb;
+  --pg-color-info-strong: #1e40af;
+  --pg-color-info-tint: #dbeafe;
+  --pg-color-info-border: #bfdbfe;
+  --pg-color-info-text: #1e40af;
+
+  /* Warning / XPath (amber) */
+  --pg-color-warning: #d97706;
+  --pg-color-warning-strong: #92400e;
+  --pg-color-warning-tint: #fef3c7;
+  --pg-color-warning-border: #fcd34d;
+  --pg-color-warning-text: #92400e;
+
+  /* Danger / error (red) */
+  --pg-color-danger: #dc2626;
+  --pg-color-danger-strong: #991b1b;
+  --pg-color-danger-tint: #fee2e2;
+  --pg-color-danger-border: #fecaca;
+  --pg-color-danger-text: #991b1b;
+
+  /* Accent / locator code (purple) */
+  --pg-color-accent: #7c3aed;
+  --pg-color-accent-strong: #5b21b6;
+  --pg-color-accent-tint: #ede9fe;
+  --pg-color-accent-border: #ddd6fe;
+  --pg-color-accent-text: #5b21b6;
+
+  /*
+   * Focus ring (retuned, WS8). Item 1 shipped a translucent ring
+   * (`rgba(37, 99, 235, 0.55)`); item 8 wired it up and measured it at
+   * 1.98:1 against the worst light background token — below WCAG 1.4.11's
+   * 3:1 bar for a non-text focus indicator — and deliberately deferred the
+   * retune as a value-redesign exercise outside item 8's charter (DL-50).
+   * WS8 closes that gap: the ring is now a SOLID colour, chosen so it clears
+   * 3:1 against EVERY background/surface token declared in the same theme
+   * (light `#1d4ed8`: worst 4.63:1, vs `--pg-color-danger-border`). Opacity
+   * is the reason the old value failed — a 55%-alpha blue composites toward
+   * whatever sits behind it, so on a light tint there was almost nothing
+   * left to see. `tokens.test.ts` now asserts the 3:1 bar per theme, so a
+   * future re-tint cannot silently reintroduce an invisible ring.
+   */
+  --pg-color-focus: #1d4ed8;
+  --pg-focus-ring: 0 0 0 2px #1d4ed8;
+}
+
+/*
+ * Base typography (WS2 item 2). Establishes the 12px base and the sans stack on
+ * both panels from one place — the panels previously set these ad hoc (sidepanel
+ * inline font-family, DevTools body font-size:13px), now removed as duplicates.
+ * Colours are left to the panels for now (hex→token migration is item 7).
+ */
+body {
+  font-family: var(--pg-font-sans);
+  font-size: var(--pg-font-size-base);
+}
+
+/*
+ * Focus visibility (WS2 item 8). `--pg-focus-ring` was declared (light + dark)
+ * in item 1 but never consumed — every interactive element relied on the
+ * browser default outline, and the Verify Selector input in SidePanel.tsx
+ * explicitly removed it (`outline:'none'`) with no replacement, a real
+ * keyboard-accessibility gap. `button` covers every native control in both
+ * panels, including the Tabs primitive's tab buttons (WS2 item 4/6) and every
+ * CopyBtn/AddBtn (item 3) — no second focus system, one rule for both panels.
+ */
+button:focus-visible,
+input:focus-visible {
+  outline: none;
+  box-shadow: var(--pg-focus-ring);
+}
+
+/*
+ * Forced colours / Windows High Contrast (WS8). `box-shadow` is dropped
+ * entirely in forced-colors mode, which would leave the ring above with
+ * nothing to draw — the focus indicator would be invisible for exactly the
+ * users who depend on it most. A system-keyword outline is the one thing
+ * forced-colors keeps, so the same rule set restores it there. The base rule
+ * still cancels the default outline (unchanged), so there is one focus
+ * system, not two.
+ */
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Reduced motion (WS8). The panels animate in two places: SidePanel's
+ * recording pulse (`@keyframes rec-blink`, an infinite opacity loop) and the
+ * `.15s`/`.2s` background transitions on the shared primitives. Both are set
+ * as INLINE styles, which a normal rule could not override — `!important`
+ * here can, so one stylesheet rule covers every current and future inline
+ * animation in both panels without touching a single component.
+ *
+ * The pulse settles at its 100% keyframe (opacity 1), so "recording" stays
+ * visible as a static dot: the state is still conveyed, only the motion is
+ * removed.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Colour — DARK (system) ───────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --pg-color-bg: #0f172a;
+    --pg-color-surface: #1e293b;
+    --pg-color-surface-sunken: #0f172a;
+    --pg-color-border: #334155;
+    --pg-color-border-strong: #475569;
+    --pg-color-text: #f1f5f9;
+    --pg-color-text-muted: #cbd5e1;
+    --pg-color-text-subtle: #94a3b8;
+    --pg-color-text-inverse: #0f172a;
+
+    --pg-color-success: #22c55e;
+    --pg-color-success-strong: #4ade80;
+    --pg-color-success-tint: #14532d;
+    --pg-color-success-border: #166534;
+    --pg-color-success-text: #86efac;
+
+    --pg-color-info: #3b82f6;
+    --pg-color-info-strong: #60a5fa;
+    --pg-color-info-tint: #1e3a8a;
+    --pg-color-info-border: #1e40af;
+    --pg-color-info-text: #bfdbfe;
+
+    --pg-color-warning: #f59e0b;
+    --pg-color-warning-strong: #fbbf24;
+    --pg-color-warning-tint: #78350f;
+    --pg-color-warning-border: #92400e;
+    --pg-color-warning-text: #fcd34d;
+
+    --pg-color-danger: #ef4444;
+    --pg-color-danger-strong: #f87171;
+    --pg-color-danger-tint: #7f1d1d;
+    --pg-color-danger-border: #991b1b;
+    --pg-color-danger-text: #fecaca;
+
+    --pg-color-accent: #a78bfa;
+    --pg-color-accent-strong: #c4b5fd;
+    --pg-color-accent-tint: #2e1065;
+    --pg-color-accent-border: #5b21b6;
+    --pg-color-accent-text: #c4b5fd;
+
+    /* Retuned, WS8 — see the light-theme note. The old translucent
+       rgba(96, 165, 250, 0.6) measured 1.74:1 against the worst dark
+       background token; solid #93c5fd measures 3.93:1. */
+    --pg-color-focus: #93c5fd;
+    --pg-focus-ring: 0 0 0 2px #93c5fd;
+  }
+}
+
+/* ── Colour — DARK (explicit user choice) ─────────────────────────────── */
+:root[data-theme='dark'] {
+  --pg-color-bg: #0f172a;
+  --pg-color-surface: #1e293b;
+  --pg-color-surface-sunken: #0f172a;
+  --pg-color-border: #334155;
+  --pg-color-border-strong: #475569;
+  --pg-color-text: #f1f5f9;
+  --pg-color-text-muted: #cbd5e1;
+  --pg-color-text-subtle: #94a3b8;
+  --pg-color-text-inverse: #0f172a;
+
+  --pg-color-success: #22c55e;
+  --pg-color-success-strong: #4ade80;
+  --pg-color-success-tint: #14532d;
+  --pg-color-success-border: #166534;
+  --pg-color-success-text: #86efac;
+
+  --pg-color-info: #3b82f6;
+  --pg-color-info-strong: #60a5fa;
+  --pg-color-info-tint: #1e3a8a;
+  --pg-color-info-border: #1e40af;
+  --pg-color-info-text: #bfdbfe;
+
+  --pg-color-warning: #f59e0b;
+  --pg-color-warning-strong: #fbbf24;
+  --pg-color-warning-tint: #78350f;
+  --pg-color-warning-border: #92400e;
+  --pg-color-warning-text: #fcd34d;
+
+  --pg-color-danger: #ef4444;
+  --pg-color-danger-strong: #f87171;
+  --pg-color-danger-tint: #7f1d1d;
+  --pg-color-danger-border: #991b1b;
+  --pg-color-danger-text: #fecaca;
+
+  --pg-color-accent: #a78bfa;
+  --pg-color-accent-strong: #c4b5fd;
+  --pg-color-accent-tint: #2e1065;
+  --pg-color-accent-border: #5b21b6;
+  --pg-color-accent-text: #c4b5fd;
+
+  /* Retuned, WS8 — same values as the system-dark block above. */
+  --pg-color-focus: #93c5fd;
+  --pg-focus-ring: 0 0 0 2px #93c5fd;
+}
+
+/*
+ * An explicit LIGHT choice needs no block of its own: the dark system rule
+ * above is guarded with :root:not([data-theme='light']), so setting
+ * data-theme='light' excludes it and the bare :root light values above take
+ * effect — light wins over system dark without duplicating the whole palette.
+ */

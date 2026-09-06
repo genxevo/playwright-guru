@@ -1,6 +1,9 @@
 node_modules
 dist
 .output
+# WS9 Decision A — the E2E-only artifact. A sibling of `.output`, not a child,
+# so it needs its own entry: `.output` does not match `.output-e2e`.
+.output-e2e
 .wxt
 coverage
 pnpm-lock.yaml
@@ -22,3 +25,13 @@ packages/locator-engine/src/scorer.ts
 packages/locator-engine/src/types.ts
 packages/codegen/src/index.ts
 packages/codegen/src/renderers/
+
+# ─── Archived gate reports (Phase A0, 2026-09-06) ──────────────────────────
+# Historical decision reports, moved out of the repository root and committed
+# for the audit trail. They are a RECORD, not working source: they are kept
+# byte-for-byte as written and are not reformatted.
+#
+# NOTE FOR THE RELEASE RECORD: `ws2-item9-report.md` — the single long-standing
+# `format:check` exception — lives in this folder after Phase A0. The exception
+# is therefore resolved BY RELOCATION, NOT BY REPAIR. The file was not edited.
+docs/archive/

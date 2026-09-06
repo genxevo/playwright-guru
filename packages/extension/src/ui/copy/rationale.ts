@@ -66,6 +66,11 @@ export const RATIONALE_COPY = {
     title: 'User-facing',
     detail: 'Built from something a person can actually see, not from internal markup.',
   },
+  PLAYWRIGHT_PREFERRED: {
+    title: 'Playwright would choose this',
+    detail:
+      "Playwright's own code generator prefers this strategy for an element like this one, so this matches what `npx playwright codegen` would produce.",
+  },
   SEMANTIC_HTML: {
     title: 'Semantic HTML',
     detail: 'The element carries real meaning, so its role is stable.',

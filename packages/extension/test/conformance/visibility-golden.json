@@ -1,0 +1,145 @@
+{
+  "$schema": "Observed behaviour. Do not hand-edit; regenerate.",
+  "generatedBy": "refresh-visibility-golden.mjs",
+  "playwrightVersion": "1.56.0",
+  "note": "playwrightVisible is Playwright locator.isVisible(). playwrightRoleMatches is whether a getByRole query finds the element. They deliberately differ (aria-hidden, zero-size). guru* are Guru’s two predicates evaluated on the same element in the same page.",
+  "predicateSource": "var __pgVisible = function playwrightVisible(el) {\n  if (window.getComputedStyle(el).visibility === 'hidden') return false;\n  // A zero box is how display:none reaches us — on the element or on any\n  // ancestor — and how [hidden] does too. INTENTIONALLY not a viewport test:\n  // an element scrolled or transformed out of view still has a box, and\n  // Playwright still matches it.\n  const r = el.getBoundingClientRect();\n  return r.width > 0 || r.height > 0;\n};\nvar __pgRoleEligible = function playwrightRoleEligible(el) {\n  if (window.getComputedStyle(el).visibility === 'hidden') return false;\n  let node = el;\n  while (node && node.tagName !== 'HTML') {\n    // display:none removes the subtree from the accessibility tree. It has to\n    // be walked explicitly here: unlike isVisible(), this rule has no bounding\n    // box test to fall back on, because a zero-size element IS still matched.\n    if (window.getComputedStyle(node).display === 'none') return false;\n    if (node.getAttribute('aria-hidden') === 'true') return false;\n    node = node.parentElement;\n  }\n  return true;\n};",
+  "visibility": {
+    "plain-visible": {
+      "html": "<button id=\"target\">Click me</button>",
+      "why": "The baseline. If this ever reports hidden, the predicate is broken outright.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "display-none-target": {
+      "html": "<button id=\"target\" style=\"display:none\">Click me</button>",
+      "why": "The element itself is removed from layout.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "display-none-ancestor": {
+      "html": "<div style=\"display:none\"><button id=\"target\">Click me</button></div>",
+      "why": "THE BUG. `display` is not inherited: #target computes `inline-block`, so a predicate that inspects only the element passes it as visible. This is the fixture that reproduces the \"2 visible\" false ambiguity on a unique locator.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "display-none-grandancestor": {
+      "html": "<div style=\"display:none\"><div><span><button id=\"target\">Click me</button></span></div></div>",
+      "why": "The walk must not stop at the immediate parent.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "visibility-hidden-target": {
+      "html": "<button id=\"target\" style=\"visibility:hidden\">Click me</button>",
+      "why": "Explicitly hidden, keeps its box — the box check alone would pass it.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "visibility-hidden-ancestor": {
+      "html": "<div style=\"visibility:hidden\"><button id=\"target\">Click me</button></div>",
+      "why": "visibility inherits, but the predicate should not rely on that alone.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "visibility-hidden-ancestor-child-visible": {
+      "html": "<div style=\"visibility:hidden\"><button id=\"target\" style=\"visibility:visible\">Click me</button></div>",
+      "why": "visibility:hidden CAN be reversed by a descendant. Playwright honours the element's own computed visibility, so this one is visible.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "hidden-attribute-target": {
+      "html": "<button id=\"target\" hidden>Click me</button>",
+      "why": "The `hidden` attribute is display:none by UA stylesheet.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "hidden-attribute-ancestor": {
+      "html": "<div hidden><button id=\"target\">Click me</button></div>",
+      "why": "Same, applied to a container.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "aria-hidden-target": {
+      "html": "<button id=\"target\" aria-hidden=\"true\">Click me</button>",
+      "why": "Removed from the accessibility tree, so the getBy* engines skip it.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "aria-hidden-ancestor": {
+      "html": "<div aria-hidden=\"true\"><button id=\"target\">Click me</button></div>",
+      "why": "aria-hidden applies to the whole subtree.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": false,
+      "guruRoleEligible": false
+    },
+    "opacity-zero-with-box": {
+      "html": "<input type=\"checkbox\" id=\"target\" style=\"opacity:0;width:20px;height:20px\">",
+      "why": "THE SECOND BUG, in the opposite direction. A transparent real <input> behind a CSS toggle switch. Playwright locates it; the old predicate discarded it, losing three genuine matches on one practice page.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "opacity-zero-ancestor": {
+      "html": "<div style=\"opacity:0\"><button id=\"target\">Click me</button></div>",
+      "why": "A transparent container does not hide its contents from Playwright either.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "zero-size": {
+      "html": "<button id=\"target\" style=\"width:0;height:0;padding:0;border:0;overflow:hidden;font-size:0\"></button>",
+      "why": "No box at all. Playwright will not match it.",
+      "playwrightVisible": false,
+      "guruVisible": false,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "offscreen-transform": {
+      "html": "<div style=\"transform:translateX(2000px)\"><a id=\"target\" href=\"/practice\">Practice</a></div>",
+      "why": "The closed off-canvas mobile drawer. Only moved aside — display:block, visibility:visible, opacity:1, real box. Playwright considers it VISIBLE, which is why a duplicated mobile nav is a real strict-mode violation and not a phantom one. Treating transforms as hidden here would silently mask that.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "offscreen-absolute": {
+      "html": "<a id=\"target\" href=\"/x\" style=\"position:absolute;left:-9999px\">Skip to content</a>",
+      "why": "The classic screen-reader-only offset. Still visible to Playwright.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    },
+    "scrolled-out-of-viewport": {
+      "html": "<div style=\"height:5000px\"></div><button id=\"target\">Click me</button>",
+      "why": "Below the fold is not hidden. The predicate must not become a viewport test.",
+      "playwrightVisible": true,
+      "guruVisible": true,
+      "playwrightRoleMatches": true,
+      "guruRoleEligible": true
+    }
+  }
+}

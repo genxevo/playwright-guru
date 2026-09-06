@@ -16,11 +16,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "pnpm build && pnpm typecheck && pnpm lint && pnpm test && pnpm format:check",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "build:e2e": "pnpm --filter @playwright-guru/extension run build:e2e",
+    "test:e2e": "pnpm --filter @playwright-guru/extension run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
+    "happy-dom": "^15.11.7",
     "prettier": "^3.9.6",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.67.0",
